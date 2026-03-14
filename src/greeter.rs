@@ -406,7 +406,9 @@ impl Greeter {
   pub async fn connect(&mut self) {
     // If socket is not already set (by tests), read from environment
     if self.socket.is_empty() {
-      self.socket = if let Ok(socket) = env::var("GREETD_SOCK") { socket } else {
+      self.socket = if let Ok(socket) = env::var("GREETD_SOCK") {
+        socket
+      } else {
         eprintln!("GREETD_SOCK must be defined");
         process::exit(1);
       };
@@ -424,7 +426,7 @@ impl Greeter {
     }
   }
 
-  #[must_use] 
+  #[must_use]
   pub const fn config(&self) -> &Matches {
     self
       .config
@@ -441,19 +443,23 @@ impl Greeter {
       .await
   }
 
-  #[must_use] 
+  #[must_use]
   pub fn option(&self, name: &str) -> Option<String> {
     self.config().opt_str(name)
   }
 
-  #[must_use] 
+  #[must_use]
   pub fn options_multi(&self, name: &str) -> Option<Vec<String>> {
-    if self.config().opt_present(name) { Some(self.config().opt_strs(name)) } else { None }
+    if self.config().opt_present(name) {
+      Some(self.config().opt_strs(name))
+    } else {
+      None
+    }
   }
 
   // Returns the width of the main window where content is displayed from the
   // provided arguments.
-  #[must_use] 
+  #[must_use]
   pub fn width(&self) -> u16 {
     if let Some(value) = self.option("width")
       && let Ok(width) = value.parse::<u16>()
@@ -469,7 +475,7 @@ impl Greeter {
   }
 
   // Returns the padding of the screen from the provided arguments.
-  #[must_use] 
+  #[must_use]
   pub fn window_padding(&self) -> u16 {
     // Check CLI override first
     if let Some(value) = self.option("window-padding")
@@ -490,7 +496,7 @@ impl Greeter {
 
   // Returns the padding of the main window where content is displayed from the
   // provided arguments.
-  #[must_use] 
+  #[must_use]
   pub fn container_padding(&self) -> u16 {
     // Check CLI override first
     if let Some(value) = self.option("container-padding")
@@ -510,7 +516,7 @@ impl Greeter {
   }
 
   // Returns the spacing between each prompt from the provided arguments.
-  #[must_use] 
+  #[must_use]
   pub fn prompt_padding(&self) -> u16 {
     // Check CLI override first
     if let Some(value) = self.option("prompt-padding")
@@ -529,7 +535,7 @@ impl Greeter {
     1
   }
 
-  #[must_use] 
+  #[must_use]
   pub fn greet_align(&self) -> GreetAlign {
     if let Some(value) = self.option("greet-align") {
       return match value.as_str() {
@@ -567,7 +573,7 @@ impl Greeter {
     }
   }
 
-  #[must_use] 
+  #[must_use]
   pub fn options() -> Options {
     let mut opts = Options::new();
 
@@ -977,7 +983,7 @@ impl Greeter {
   }
 
   // Computes the size of the prompt to help determine where input should start.
-  #[must_use] 
+  #[must_use]
   pub fn prompt_width(&self) -> usize {
     match &self.prompt {
       None => 0,
