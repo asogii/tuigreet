@@ -63,6 +63,7 @@ where
 
   #[cfg(not(test))]
   {
+    output::activate_vt();
     enable_raw_mode()?;
     execute!(io::stdout(), EnterAlternateScreen)?;
   }

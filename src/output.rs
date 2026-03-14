@@ -10,7 +10,7 @@ use std::{fs, process};
 #[cfg(not(test))]
 use tuigreet::config::{OutputConfig, TerminalConfig};
 
-/// Raw FFI bindings for the two terminal-sizing ioctls.
+/// Raw FFI bindings for terminal ioctls.
 ///
 /// These are Linux-specific and only compiled outside the test harness to avoid
 /// needing a libc dependency.
@@ -24,6 +24,12 @@ mod ffi {
   /// `ioctl(TIOCSWINSZ, ...)` request code (Linux, most architectures).
   pub const TIOCSWINSZ: c_ulong = 0x5414;
 
+  /// `ioctl(VT_ACTIVATE, n)`: switch to virtual terminal `n` (1-indexed).
+  pub const VT_ACTIVATE: c_ulong = 0x5606;
+
+  /// `ioctl(VT_WAITACTIVE, n)`: block until virtual terminal `n` is active.
+  pub const VT_WAITACTIVE: c_ulong = 0x5607;
+
   #[repr(C)]
   pub struct WinSize {
     pub ws_row:    u16,
@@ -34,6 +40,72 @@ mod ffi {
 
   unsafe extern "C" {
     pub fn ioctl(fd: c_int, request: c_ulong, arg: *mut WinSize) -> c_int;
+  }
+
+  // `ioctl` is variadic in C; both bindings link to the same symbol with
+  // different Rust-level signatures. The warning is expected and harmless.
+  #[allow(clashing_extern_declarations)]
+  unsafe extern "C" {
+    /// `ioctl(2)` variant for requests that pass an integer argument directly
+    /// rather than via a pointer (e.g. `VT_ACTIVATE`, `VT_WAITACTIVE`).
+    #[link_name = "ioctl"]
+    pub fn ioctl_vt(fd: c_int, request: c_ulong, vt_num: c_int) -> c_int;
+  }
+}
+
+/// Activate the virtual terminal tuigreet is running on and wait for it to
+/// become the foreground console before the TUI starts rendering.
+///
+/// greetd issues `VT_ACTIVATE` when switching to the greeter VT but does not
+/// call `VT_WAITACTIVE`, so the switch may still be in progress when tuigreet
+/// begins drawing. Any characters the kernel writes to the VT during that
+/// window (boot messages, journal output forwarded to the console) can
+/// overwrite the first rendered frame. Completing the switch here eliminates
+/// that race.
+///
+/// The VT number is derived from the `/proc/self/fd/1` symlink. Failures
+/// are non-fatal: tuigreet will still run if the ioctl is unavailable.
+#[cfg(not(test))]
+pub fn activate_vt() {
+  use std::{ffi::c_int, fs, os::unix::io::AsRawFd};
+
+  use ffi::{VT_ACTIVATE, VT_WAITACTIVE, ioctl_vt};
+
+  // Resolve stdout's device path to get the VT number.
+  // For a virtual terminal, /proc/self/fd/1 symlinks to /dev/ttyN.
+  let vt_num: c_int = if let Some(n) = (|| -> Option<c_int> {
+    let target = fs::read_link("/proc/self/fd/1").ok()?;
+    let name = target.file_name()?.to_str()?;
+    let n: c_int = name.strip_prefix("tty")?.parse().ok()?;
+    if n > 0 && n <= 63 { Some(n) } else { None }
+  })() {
+    n
+  } else {
+    tracing::debug!("stdout is not a VT device; skipping VT activation");
+    return;
+  };
+
+  let fd = std::io::stdout().as_raw_fd();
+
+  // SAFETY: fd is our stdout tty; VT_ACTIVATE takes a c_int VT number.
+  let ret = unsafe { ioctl_vt(fd, VT_ACTIVATE, vt_num) };
+  if ret < 0 {
+    tracing::warn!(
+      "VT_ACTIVATE({}) failed ({}); boot logs may appear over the TUI",
+      vt_num,
+      std::io::Error::last_os_error()
+    );
+    return;
+  }
+
+  // SAFETY: same as above.
+  let ret = unsafe { ioctl_vt(fd, VT_WAITACTIVE, vt_num) };
+  if ret < 0 {
+    tracing::warn!(
+      "VT_WAITACTIVE({}) failed: {}",
+      vt_num,
+      std::io::Error::last_os_error()
+    );
   }
 }
 
@@ -330,7 +402,7 @@ fn apply_winsize(rows: u16, cols: u16, xpixel: u16, ypixel: u16) {
       ws_xpixel: xpixel,
       ws_ypixel: ypixel,
     };
-    let ret = ioctl(fd, TIOCSWINSZ, &mut ws);
+    let ret = ioctl(fd, TIOCSWINSZ, &raw mut ws);
     if ret != 0 {
       tracing::warn!("TIOCSWINSZ failed: {}", std::io::Error::last_os_error());
     }
@@ -351,7 +423,7 @@ fn get_winsize(fd: i32) -> Option<(u16, u16, u16, u16)> {
       ws_xpixel: 0,
       ws_ypixel: 0,
     };
-    let ret = ioctl(fd, TIOCGWINSZ, &mut ws);
+    let ret = ioctl(fd, TIOCGWINSZ, &raw mut ws);
     if ret == 0 {
       Some((ws.ws_row, ws.ws_col, ws.ws_xpixel, ws.ws_ypixel))
     } else {
