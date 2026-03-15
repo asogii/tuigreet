@@ -38,7 +38,10 @@ async fn main() {
   let greeter = Greeter::new(events.sender()).await;
 
   if let Err(error) = run(backend, greeter, events).await {
-    if matches!(error.downcast_ref::<AuthStatus>(), Some(AuthStatus::Success)) {
+    if matches!(
+      error.downcast_ref::<AuthStatus>(),
+      Some(AuthStatus::Success)
+    ) {
       return;
     }
 
@@ -84,6 +87,22 @@ where
         username: greeter.username.value.clone(),
       })
       .await;
+  }
+
+  if greeter.user_menu && greeter.users.options.len() == 1 {
+    if let Some(user) = greeter.users.options.first().cloned() {
+      tracing::info!("auto-selecting sole eligible user: {}", user.username);
+
+      greeter.username =
+        crate::ui::common::masked::MaskedString::from(user.username, user.name);
+      greeter.working = true;
+
+      ipc
+        .send(Request::CreateSession {
+          username: greeter.username.value.clone(),
+        })
+        .await;
+    }
   }
 
   let greeter = Arc::new(RwLock::new(greeter));
@@ -141,8 +160,10 @@ where
       },
 
       Some(Event::PowerCommand(command)) => {
-        if matches!(power::run(&greeter, command).await, PowerPostAction::ClearScreen)
-        {
+        if matches!(
+          power::run(&greeter, command).await,
+          PowerPostAction::ClearScreen
+        ) {
           execute!(io::stdout(), LeaveAlternateScreen)?;
           terminal.set_cursor_position((1, 1))?;
           terminal.clear()?;
