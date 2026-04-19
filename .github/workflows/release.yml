@@ -65,7 +65,7 @@ jobs:
         run: mv target/${{ matrix.arch.target }}/release/tuigreet target/${{ matrix.arch.target }}/release/tuigreet-${{ steps.version.outputs.VERSION }}-${{ matrix.arch.name }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tuigreet-${{ steps.version.outputs.VERSION }}-${{ matrix.arch.name }}
           path: target/${{ matrix.arch.target }}/release/tuigreet-${{ steps.version.outputs.VERSION }}-${{ matrix.arch.name }}
