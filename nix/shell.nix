@@ -1,31 +1,20 @@
 {
-  mkShell,
-  rustc,
-  cargo,
-  rust-analyzer-unwrapped,
-  rustfmt,
-  clippy,
+  self,
+  craneLib,
+  stdenv,
   taplo,
-  rustPlatform,
   cargo-nextest,
 }:
-mkShell {
-  name = "rust";
+craneLib.devShell {
+  # Automatically inherit any build inputs from `my-crate`
+  inputsFrom = [self.packages.${stdenv.hostPlatform.system}.tuigreet];
 
-  strictDeps = true;
+  # Also inherit inputs from checks.
+  checks = self.checks.${stdenv.hostPlatform.system};
+
+  # Other packages not provided by rust-overlay
   packages = [
-    rustc
-    cargo
-
-    # Tools
-    rust-analyzer-unwrapped # LSP
-    (rustfmt.override {asNightly = true;}) # formatter
-    clippy # linter
-    taplo # TOML formatter
-
-    # Additional Cargo Tooling
+    taplo
     cargo-nextest
   ];
-
-  RUST_SRC_PATH = "${rustPlatform.rustLibSrc}";
 }

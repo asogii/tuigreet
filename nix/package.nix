@@ -1,18 +1,15 @@
 {
   lib,
-  rustPlatform,
+  craneLib,
   installShellFiles,
+  versionCheckHook,
   scdoc,
 }: let
-  s = ../.;
-
-  cargoTOML = lib.importTOML (s + /Cargo.toml);
-in
-  rustPlatform.buildRustPackage (finalAttrs: {
+  commonArgs = {
     pname = "tuigreet";
-    version = cargoTOML.package.version;
-
+    version = (lib.importTOML ../Cargo.toml).package.version;
     src = let
+      s = ../.;
       fs = lib.fileset;
     in
       fs.toSource {
@@ -26,25 +23,33 @@ in
           (s + /i18n.toml)
         ];
       };
+    strictDeps = true;
+  };
 
-    cargoLock.lockFile = "${finalAttrs.src}/Cargo.lock";
-    enableParallelBuilding = true;
-    useNextest = true;
+  cargoArtifacts = craneLib.buildDepsOnly (commonArgs // {name = "tuigreet-deps";});
+in
+  craneLib.buildPackage (commonArgs
+    // {
+      inherit cargoArtifacts;
+      useNextest = true;
 
-    nativeBuildInputs = [
-      installShellFiles
-      scdoc
-    ];
+      nativeInstallCheckInputs = [versionCheckHook];
+      doInstallCheck = true;
 
-    postInstall = ''
-      scdoc < ${../contrib}/man/tuigreet-1.scd > tuigreet.1
-      installManPage tuigreet.1
-    '';
+      nativeBuildInputs = [
+        installShellFiles
+        scdoc
+      ];
 
-    meta = {
-      description = "Graphical console greeter for greetd";
-      license = lib.licenses.gpl3Only;
-      maintainers = with lib.maintainers; [NotAShelf];
-      mainProgram = "tuigreet";
-    };
-  })
+      postInstall = ''
+        scdoc < ${../contrib}/man/tuigreet-1.scd > tuigreet.1
+        installManPage tuigreet.1
+      '';
+
+      meta = {
+        description = "Graphical console greeter for greetd";
+        license = lib.licenses.gpl3Only;
+        maintainers = with lib.maintainers; [NotAShelf];
+        mainProgram = "tuigreet";
+      };
+    })

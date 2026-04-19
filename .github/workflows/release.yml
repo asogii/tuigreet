@@ -14,38 +14,15 @@ on:
         description: 'Tag to build'
         required: true
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  clippy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Lint
-        run: |
-          cargo clippy -- -D warnings
-          cargo clippy --release -- -D warnings
+  validate:
+    uses: ./.github/workflows/rust.yml
 
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: |
-          sudo apt update && sudo apt install -y libnss-wrapper scdoc
-      - uses: Swatinem/rust-cache@v2
-      - name: Test
-        env:
-          NSS_WRAPPER_PASSWD: contrib/fixtures/passwd
-          NSS_WRAPPER_GROUP: contrib/fixtures/group
-        run: |
-          cargo test
-          LD_PRELOAD=libnss_wrapper.so cargo test --features nsswrapper nsswrapper_
-      - name: Generate manpage
-        run: |
-          scdoc < contrib/man/tuigreet-1.scd > /dev/null
-
-  build:
+  build-cross:
     strategy:
       matrix:
         arch:
@@ -64,20 +41,29 @@ jobs:
           else
             echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           fi
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.arch.target }}
+
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: cargo-cache-${{ matrix.arch.target }}
+
       - name: Install cross
-        run: cargo install cross
+        run: cargo install cross --version 0.2.5
+
       - name: Build
         run: |
           cross build --release --target=${{ matrix.arch.target }}
+
       - name: Rename artifact
         run: mv target/${{ matrix.arch.target }}/release/tuigreet target/${{ matrix.arch.target }}/release/tuigreet-${{ steps.version.outputs.VERSION }}-${{ matrix.arch.name }}
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -86,7 +72,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    needs: build
+    needs: [validate, build-cross]
     steps:
       - name: Get the version
         id: version
@@ -100,6 +86,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: target/out
+
+      - name: Generate checksums
+        run: |
+          cd target/out
+          sha256sum */* > SHA256SUMS.txt
+
       - name: Create release
         uses: ncipollo/release-action@v1
         with:
@@ -107,4 +99,4 @@ jobs:
           name: ${{ steps.version.outputs.VERSION }}
           prerelease: false
           tag: refs/tags/${{ steps.version.outputs.VERSION }}
-          artifacts: target/out/*/*
+          artifacts: target/out/*/*,target/out/SHA256SUMS.txt
