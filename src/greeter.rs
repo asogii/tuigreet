@@ -1023,7 +1023,11 @@ impl Greeter {
     // Display
     self.time = config.display.show_time;
     self.time_format = config.display.time_format.clone();
-    self.greeting = config.display.greeting.clone();
+    self.greeting = if config.display.issue {
+      get_issue()
+    } else {
+      config.display.greeting.clone()
+    };
     self.title.enable = config.display.show_title;
     // Remember
     self.default_user = config.remember.default_user.clone();
