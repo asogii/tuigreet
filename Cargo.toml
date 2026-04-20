@@ -37,7 +37,7 @@ rand = "0.10.0"
 rust-embed = "8.9.0"
 rust-ini = "0.21.3"
 serde = { version = "1.0.228", features = [ "derive" ] }
-tokio = { version = "1.48.0", default-features = false, features = [
+tokio = { version = "1.51.1", default-features = false, features = [
   "macros",
   "rt-multi-thread",
   "net",
