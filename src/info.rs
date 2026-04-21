@@ -78,7 +78,7 @@ pub fn get_issue() -> Option<String> {
   };
 
   let user_count = match UtmpParser::from_path("/var/run/utmp")
-    .map(|utmp| {
+    .map_or(0, |utmp| {
       utmp.into_iter().fold(0, |acc, entry| {
         match entry {
           Ok(UtmpEntry::UserProcess { .. }) => acc + 1,
@@ -87,7 +87,6 @@ pub fn get_issue() -> Option<String> {
         }
       })
     })
-    .unwrap_or(0)
   {
     n if n < 2 => format!("{n} user"),
     n => format!("{n} users"),
@@ -270,7 +269,7 @@ pub fn get_min_max_uids(
 
       let uids: (u32, u32) = file.lines().fold(default, |acc, line| {
         line
-          .map(|line| {
+          .map_or(acc, |line| {
             let mut tokens = line.split_whitespace();
 
             match (overrides, tokens.next(), tokens.next()) {
@@ -283,7 +282,6 @@ pub fn get_min_max_uids(
               _ => acc,
             }
           })
-          .unwrap_or(acc)
       });
 
       uids

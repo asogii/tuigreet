@@ -63,9 +63,7 @@ pub fn enumerate_outputs() -> Vec<DrmOutput> {
 
 /// Inner implementation of [`enumerate_outputs`] that accepts an arbitrary
 /// sysfs DRM root path, allowing unit tests to use a temporary directory.
-pub fn enumerate_outputs_from(
-  drm_path: &std::path::Path,
-) -> Vec<DrmOutput> {
+pub fn enumerate_outputs_from(drm_path: &std::path::Path) -> Vec<DrmOutput> {
   let mut outputs = Vec::new();
 
   let Ok(entries) = fs::read_dir(drm_path) else {
@@ -98,8 +96,7 @@ pub fn enumerate_outputs_from(
     }
 
     let connected = fs::read_to_string(&status_path)
-      .map(|s| s.trim() == "connected")
-      .unwrap_or(false);
+      .is_ok_and(|s| s.trim() == "connected");
 
     // First line of `modes` is the preferred/native resolution.
     let modes_path = entry_path.join("modes");
@@ -332,7 +329,7 @@ fn apply_winsize(rows: u16, cols: u16, xpixel: u16, ypixel: u16) {
       ws_xpixel: xpixel,
       ws_ypixel: ypixel,
     };
-    let ret = ioctl(fd, TIOCSWINSZ, &mut ws);
+    let ret = ioctl(fd, TIOCSWINSZ, &raw mut ws);
     if ret != 0 {
       tracing::warn!("TIOCSWINSZ failed: {}", std::io::Error::last_os_error());
     }
@@ -353,7 +350,7 @@ fn get_winsize(fd: i32) -> Option<(u16, u16, u16, u16)> {
       ws_xpixel: 0,
       ws_ypixel: 0,
     };
-    let ret = ioctl(fd, TIOCGWINSZ, &mut ws);
+    let ret = ioctl(fd, TIOCGWINSZ, &raw mut ws);
     if ret == 0 {
       Some((ws.ws_row, ws.ws_col, ws.ws_xpixel, ws.ws_ypixel))
     } else {
