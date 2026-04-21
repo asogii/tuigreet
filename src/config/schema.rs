@@ -89,14 +89,14 @@ impl TerminalConfig {
   /// Returns `true` when the config is consistent: either both fields are
   /// absent, or both are `Some(v)` with `v > 0`.  Any other combination is
   /// invalid.
-  #[must_use] 
+  #[must_use]
   pub fn is_valid(&self) -> bool {
     self.invalid_reason().is_none()
   }
 
   /// Returns a human-readable error string describing the first invalid
   /// condition found, or `None` when the config is consistent.
-  #[must_use] 
+  #[must_use]
   pub fn invalid_reason(&self) -> Option<String> {
     match (self.cols, self.rows) {
       (Some(_), None) => Some(
@@ -464,7 +464,7 @@ fn default_xsessions_dirs() -> Vec<String> {
 }
 
 fn default_xsession_wrapper() -> Option<String> {
-  Some("startx".to_string())
+  Some("startx /usr/bin/env".to_string())
 }
 
 const fn default_min_uid() -> u32 {
