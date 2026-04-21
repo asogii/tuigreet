@@ -31,8 +31,9 @@ async fn render_ui(
 ) -> Buffer {
   let (backend, buffer, _rx) = TestBackend::new(width, height);
   let mut terminal = Terminal::new(backend).unwrap();
+  let mut anim = crate::animation::State::new();
 
-  ui::draw(greeter.clone(), &mut terminal).await.unwrap();
+  ui::draw(greeter.clone(), &mut terminal, &mut anim).await.unwrap();
 
   let locked_buffer = buffer.lock().unwrap();
   locked_buffer.clone()
