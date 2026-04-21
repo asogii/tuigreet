@@ -32,6 +32,9 @@ use tui::{
 use tuigreet::{Mode, config::WidgetPosition};
 use util::buttonize;
 
+#[cfg(feature = "animations")]
+use tachyonfx::EffectRenderer;
+
 use self::common::style::{Theme, Themed};
 pub use self::i18n::MESSAGES;
 use crate::{Greeter, info::capslock_status, ui::util::should_hide_cursor};
@@ -64,12 +67,23 @@ fn get_widget_position(greeter: &Greeter, widget_name: &str) -> WidgetPosition {
 pub async fn draw<B>(
   greeter: Arc<RwLock<Greeter>>,
   terminal: &mut Terminal<B>,
+  #[allow(unused_variables)] anim: &mut crate::animation::State,
 ) -> Result<(), Box<dyn Error>>
 where
   B: tui::backend::Backend,
 {
   let mut greeter = greeter.write().await;
   let hide_cursor = should_hide_cursor(&greeter);
+
+  #[cfg(feature = "animations")]
+  let fx_elapsed = {
+    let (enabled, duration_ms) = greeter
+      .loaded_config
+      .as_ref()
+      .map(|c| (c.animations.enabled, c.animations.startup_duration_ms))
+      .unwrap_or((true, 800));
+    anim.tick(enabled, duration_ms)
+  };
 
   terminal.draw(|f| {
     let theme = &greeter.theme;
@@ -214,6 +228,11 @@ where
 
     if !hide_cursor && let Some(cursor) = cursor {
       f.set_cursor_position((cursor.0 - 1, cursor.1 - 1));
+    }
+
+    #[cfg(feature = "animations")]
+    if let Some(effect) = anim.active_effect() {
+      f.render_effect(effect, size, fx_elapsed);
     }
   })?;
 

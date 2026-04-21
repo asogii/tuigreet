@@ -20,6 +20,7 @@ path = "src/main.rs"
 [features]
 default    = [  ]
 nsswrapper = [  ]
+animations = ["dep:tachyonfx"]
 
 [dependencies]
 ansi-to-tui = "7.0.0"
@@ -37,6 +38,7 @@ rand = "0.10.1"
 rust-embed = "8.9.0"
 rust-ini = "0.21.3"
 serde = { version = "1.0.228", features = [ "derive" ] }
+tachyonfx = { version = "0.10.1", features = ["std-duration", "sendable"], optional = true }
 tokio = { version = "1.51.1", default-features = false, features = [
   "macros",
   "rt-multi-thread",

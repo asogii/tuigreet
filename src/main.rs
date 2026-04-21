@@ -1,6 +1,7 @@
 #[macro_use]
 mod macros;
 
+mod animation;
 mod event;
 mod greeter;
 mod info;
@@ -68,6 +69,7 @@ where
   }
 
   let mut terminal = Terminal::new(backend)?;
+  let mut anim = animation::State::new();
 
   #[cfg(not(test))]
   terminal.clear()?;
@@ -134,7 +136,7 @@ where
     }
 
     match events.next().await {
-      Some(Event::Render) => ui::draw(greeter.clone(), &mut terminal).await?,
+      Some(Event::Render) => ui::draw(greeter.clone(), &mut terminal, &mut anim).await?,
       Some(Event::Key(key)) => {
         keyboard::handle(greeter.clone(), key, ipc.clone()).await?;
       },
@@ -159,7 +161,7 @@ where
 
       Some(Event::Refresh) => {
         // Config was hot reloaded, force a render
-        ui::draw(greeter.clone(), &mut terminal).await?;
+        ui::draw(greeter.clone(), &mut terminal, &mut anim).await?;
       },
 
       _ => {},

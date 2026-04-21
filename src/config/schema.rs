@@ -1,5 +1,33 @@
 use serde::{Deserialize, Serialize};
 
+/// Animation configuration
+///
+/// Example:
+/// ```toml
+/// [animations]
+/// enabled = true
+/// startup_duration_ms = 800
+/// ```
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+pub struct AnimationsConfig {
+  /// Enable the startup coalesce animation.
+  #[serde(default = "default_true")]
+  pub enabled: bool,
+
+  /// Duration of the startup coalesce effect in milliseconds.
+  #[serde(default = "default_startup_duration_ms")]
+  pub startup_duration_ms: u32,
+}
+
+impl Default for AnimationsConfig {
+  fn default() -> Self {
+    Self {
+      enabled:             true,
+      startup_duration_ms: default_startup_duration_ms(),
+    }
+  }
+}
+
 /// Root configuration structure
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct Config {
@@ -42,6 +70,10 @@ pub struct Config {
   /// they take precedence over output-derived sizing.
   #[serde(default)]
   pub terminal: TerminalConfig,
+
+  /// Animation settings.
+  #[serde(default)]
+  pub animations: AnimationsConfig,
 }
 
 /// Configuration for a single DRM output (monitor/display).
@@ -505,4 +537,8 @@ const fn default_kb_sessions() -> u8 {
 
 const fn default_kb_power() -> u8 {
   12
+}
+
+const fn default_startup_duration_ms() -> u32 {
+  800
 }

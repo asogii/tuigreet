@@ -10,6 +10,9 @@ use tokio::{
 
 use crate::AuthStatus;
 
+#[cfg(all(feature = "animations", not(test)))]
+const FRAME_RATE: f64 = 30.0;
+#[cfg(any(not(feature = "animations"), test))]
 const FRAME_RATE: f64 = 2.0;
 
 /// Events that drive the UI event loop
