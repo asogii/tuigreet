@@ -95,8 +95,8 @@ pub fn enumerate_outputs_from(drm_path: &std::path::Path) -> Vec<DrmOutput> {
       continue;
     }
 
-    let connected = fs::read_to_string(&status_path)
-      .is_ok_and(|s| s.trim() == "connected");
+    let connected =
+      fs::read_to_string(&status_path).is_ok_and(|s| s.trim() == "connected");
 
     // First line of `modes` is the preferred/native resolution.
     let modes_path = entry_path.join("modes");

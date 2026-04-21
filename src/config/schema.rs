@@ -205,6 +205,10 @@ pub struct DisplayConfig {
   #[serde(default = "default_show_title")]
   pub show_title: bool,
 
+  /// Custom login form title
+  #[serde(default)]
+  pub custom_title: Option<String>,
+
   /// Show /etc/issue file
   #[serde(default)]
   pub issue: bool,

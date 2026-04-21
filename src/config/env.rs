@@ -64,6 +64,10 @@ pub fn load_env_variables() -> Config {
     }
   }
 
+  if let Ok(value) = env::var("TUIGREET_CUSTOM_TITLE") {
+    config.display.custom_title = Some(value);
+  }
+
   if let Ok(value) = env::var("TUIGREET_ISSUE") {
     if let Ok(issue) = parse_bool(&value) {
       config.display.issue = issue;

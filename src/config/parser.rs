@@ -103,6 +103,9 @@ fn apply_config_layer(dest: &mut Config, src: Config) {
   if src.display.show_title != defaults.display.show_title {
     dest.display.show_title = src.display.show_title;
   }
+  if src.display.custom_title != defaults.display.custom_title {
+    dest.display.custom_title = src.display.custom_title.clone();
+  }
   if src.display.issue != defaults.display.issue {
     dest.display.issue = src.display.issue;
   }
@@ -341,6 +344,9 @@ pub fn extract_cli_config(matches: &getopts::Matches) -> Config {
   }
   if matches.opt_present("title") {
     config.display.show_title = true;
+  }
+  if let Some(custom_title) = matches.opt_str("custom-title") {
+    config.display.custom_title = Some(custom_title);
   }
   if let Some(greeting) = matches.opt_str("greeting") {
     config.display.greeting = Some(greeting);

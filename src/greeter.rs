@@ -641,6 +641,12 @@ impl Greeter {
       "GREETING",
     );
     opts.optflag("", "title", "show the container's title");
+    opts.optopt(
+      "",
+      "custom-title",
+      "custom title for the login form",
+      "TITLE",
+    );
     opts.optflag("t", "time", "display the current date and time");
     opts.optopt(
       "",
@@ -833,6 +839,9 @@ impl Greeter {
     }
 
     self.title.enable = self.config().opt_present("title");
+    if let Some(custom_title) = self.option("custom-title") {
+      self.title.custom = Some(custom_title);
+    }
 
     if self.config().opt_present("user-menu") {
       self.user_menu = true;
@@ -1035,6 +1044,7 @@ impl Greeter {
       config.display.greeting.clone()
     };
     self.title.enable = config.display.show_title;
+    self.title.custom = config.display.custom_title.clone();
     // Remember
     self.default_user = config.remember.default_user.clone();
     self.remember = config.remember.username;
@@ -1084,11 +1094,16 @@ impl Greeter {
 pub struct TitleOption {
   // Display the container's title
   pub enable: bool,
+  // Custom title text
+  pub custom: Option<String>,
 }
 
 impl Default for TitleOption {
   fn default() -> Self {
-    Self { enable: true }
+    Self {
+      enable: true,
+      custom: None,
+    }
   }
 }
 

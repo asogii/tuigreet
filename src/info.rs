@@ -77,8 +77,8 @@ pub fn get_issue() -> Option<String> {
     )
   };
 
-  let user_count = match UtmpParser::from_path("/var/run/utmp")
-    .map_or(0, |utmp| {
+  let user_count =
+    match UtmpParser::from_path("/var/run/utmp").map_or(0, |utmp| {
       utmp.into_iter().fold(0, |acc, entry| {
         match entry {
           Ok(UtmpEntry::UserProcess { .. }) => acc + 1,
@@ -86,11 +86,10 @@ pub fn get_issue() -> Option<String> {
           _ => acc,
         }
       })
-    })
-  {
-    n if n < 2 => format!("{n} user"),
-    n => format!("{n} users"),
-  };
+    }) {
+      n if n < 2 => format!("{n} user"),
+      n => format!("{n} users"),
+    };
 
   let uts = nix::sys::utsname::uname();
   let vtnr: usize = env::var("XDG_VTNR")
@@ -268,20 +267,19 @@ pub fn get_min_max_uids(
       let file = BufReader::new(file);
 
       let uids: (u32, u32) = file.lines().fold(default, |acc, line| {
-        line
-          .map_or(acc, |line| {
-            let mut tokens = line.split_whitespace();
+        line.map_or(acc, |line| {
+          let mut tokens = line.split_whitespace();
 
-            match (overrides, tokens.next(), tokens.next()) {
-              ((None, _), Some("UID_MIN"), Some(value)) => {
-                (value.parse::<u32>().unwrap_or(acc.0), acc.1)
-              },
-              ((_, None), Some("UID_MAX"), Some(value)) => {
-                (acc.0, value.parse::<u32>().unwrap_or(acc.1))
-              },
-              _ => acc,
-            }
-          })
+          match (overrides, tokens.next(), tokens.next()) {
+            ((None, _), Some("UID_MIN"), Some(value)) => {
+              (value.parse::<u32>().unwrap_or(acc.0), acc.1)
+            },
+            ((_, None), Some("UID_MAX"), Some(value)) => {
+              (acc.0, value.parse::<u32>().unwrap_or(acc.1))
+            },
+            _ => acc,
+          }
+        })
       });
 
       uids
