@@ -373,11 +373,23 @@ tuigreet makes an effort to include detailed context with line numbers and
 source code snippets to help identify and fix configuration issues. For example:
 
 ```plaintext
-TOML parsing error at line 5, column 15:
-   4 | [layout]
-   5 | width = "invalid_number"
-     |         ^^^^^^^^^^^^^^^^ expected integer, found string
-   6 | window_padding = 2
+error[TOML001]: TOML parse error at line 2: extra `=`, expected nothing
+  ┌─ config.toml:2:9
+  │
+2 │ width = = 123
+  │         ^ extra `=`, expected nothing
+
+error[TOML001]: TOML parse error at line 1: unclosed table, expected `]`
+  ┌─ extra.toml:1:9
+  │
+1 │ [session
+  │         ^ unclosed table, expected `]`
+
+error[TOML001]: TOML parse error at line 2: key with no value, expected `=`
+  ┌─ theme.toml:2:5
+  │
+2 │ key with space = true
+  │     ^ key with no value, expected `=`
 ```
 
 ### Multi-monitor Support
