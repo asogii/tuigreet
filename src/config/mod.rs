@@ -16,14 +16,8 @@ pub enum ConfigError {
   /// TOML parsing error
   Parse(toml::de::Error),
 
-  /// TOML parsing error with file context
-  ParseWithContext {
-    file:             PathBuf,
-    line:             usize,
-    column:           usize,
-    context:          Vec<String>,
-    original_message: String,
-  },
+  /// TOML parsing error with file context (rendered via codespan)
+  ParseWithContext { source: String },
   /// General validation error with description
   Validation(String),
 
@@ -54,21 +48,8 @@ impl fmt::Display for ConfigError {
     match self {
       Self::Io(err) => write!(f, "I/O error: {err}"),
       Self::Parse(err) => write!(f, "TOML parse error: {err}"),
-      Self::ParseWithContext {
-        file,
-        line,
-        column,
-        context,
-        original_message,
-      } => {
-        writeln!(f, "TOML parse error: {original_message}")?;
-        writeln!(f, "File: {}", file.display())?;
-        writeln!(f, "Line: {line}, Column: {column}")?;
-        writeln!(f)?;
-        for line in context {
-          writeln!(f, "{line}")?;
-        }
-        Ok(())
+      Self::ParseWithContext { source } => {
+        write!(f, "{}", source)
       },
       Self::Validation(msg) => write!(f, "Validation error: {msg}"),
       Self::MutuallyExclusive(opt1, opt2) => {
