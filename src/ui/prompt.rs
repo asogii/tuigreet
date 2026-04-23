@@ -146,7 +146,8 @@ pub fn draw_with_area(
         prompt_value(theme, greeter.prompt.as_ref())
       };
 
-      let answer_label = Paragraph::new(answer_text);
+      let answer_label =
+        Paragraph::new(answer_text).style(theme.of(&[Themed::Prompt]));
 
       if greeter.mode == Mode::Password
         || greeter.previous_mode == Mode::Password

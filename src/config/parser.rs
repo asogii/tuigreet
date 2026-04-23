@@ -4,6 +4,11 @@ use std::{
   path::{Path, PathBuf},
 };
 
+use codespan_reporting::{
+  diagnostic::{Diagnostic, Label},
+  files::{Files, SimpleFiles},
+  term,
+};
 use dirs::config_dir;
 
 use crate::config::{
@@ -265,45 +270,39 @@ fn toml_error(
   content: &str,
   original_error: toml::de::Error,
 ) -> ConfigError {
-  // Extract location information from the original error
-  if let Some(span) = original_error.span() {
-    let lines: Vec<&str> = content.lines().collect();
-    let line_num = content[..span.start].lines().count();
-    let col_num =
-      span.start - content[..span.start].rfind('\n').map_or(0, |n| n + 1);
+  let span = match original_error.span() {
+    Some(span) => span,
+    None => return ConfigError::Parse(original_error),
+  };
 
-    // Create context around the error
-    let context_start = line_num.saturating_sub(2);
-    let context_end = std::cmp::min(line_num + 3, lines.len());
+  let mut files = SimpleFiles::new();
+  let file_id = files.add(path.to_string_lossy(), content);
 
-    let mut context_lines = Vec::new();
-    for (i, line) in lines[context_start..context_end].iter().enumerate() {
-      let actual_line_num = context_start + i + 1;
-      if actual_line_num == line_num + 1 {
-        let prefix = format!("  > {:3}:{}  ", actual_line_num, col_num + 1);
-        context_lines.push(format!("{prefix}{line}"));
-        // Add arrow pointing to error column if reasonable column position
-        if col_num < 80 {
-          let prefix_len = prefix.chars().count();
-          context_lines.push(format!("{}^", " ".repeat(prefix_len)));
-        }
-      } else {
-        context_lines.push(format!("    {actual_line_num:3}:    {line}"));
-      }
-    }
+  let diagnostic = Diagnostic::error()
+    .with_message(original_error.message())
+    .with_labels(vec![
+      Label::primary(file_id, span.start..span.end)
+        .with_message("TOML parse error"),
+    ]);
 
-    // Return error w/ context
-    return ConfigError::ParseWithContext {
-      file:             path.to_path_buf(),
-      line:             line_num + 1,
-      column:           col_num + 1,
-      context:          context_lines,
-      original_message: original_error.message().to_string(),
-    };
+  let config = term::Config::default();
+  let writer = term::termcolor::StandardStream::stderr(
+    term::termcolor::ColorChoice::Always,
+  );
+  term::emit_to_io_write(&mut writer.lock(), &config, &files, &diagnostic)
+    .unwrap_or_else(|_| {
+      eprintln!("TOML parse error: {}", original_error.message())
+    });
+
+  ConfigError::ParseWithContext {
+    source: format!(
+      "TOML parse error: {} at {}:{} (byte {})",
+      original_error.message(),
+      path.display(),
+      files.line_index(file_id, span.start).unwrap_or(0) + 1,
+      span.start
+    ),
   }
-
-  // Fall back to original error if no span info
-  ConfigError::Parse(original_error)
 }
 
 /// Load system configuration from /etc/tuigreet/config.toml.
