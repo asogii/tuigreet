@@ -3,7 +3,7 @@ use std::error::Error;
 use tui::{
   layout::{Constraint, Direction, Layout, Rect},
   text::Span,
-  widgets::{Block, BorderType, Borders, Paragraph},
+  widgets::{Block, BorderType, Borders, Clear, Paragraph},
 };
 
 use super::common::style::Themed;
@@ -35,6 +35,10 @@ pub fn draw_with_area(
     width - container_padding,
     height - container_padding,
   );
+
+  if greeter.animation.is_some() {
+    f.render_widget(Clear, container);
+  }
 
   let block = Block::default()
     .title(titleize(&fl!("title_command")))

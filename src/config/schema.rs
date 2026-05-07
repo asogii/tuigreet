@@ -33,6 +33,9 @@ pub struct Config {
   #[serde(default)]
   pub theme: ThemeConfig,
 
+  #[serde(default)]
+  pub background: BackgroundConfig,
+
   /// Per-output (display/monitor) configuration.
   /// Use `[[outputs]]` array of tables in TOML.
   #[serde(default)]
@@ -418,6 +421,53 @@ pub struct ThemeConfig {
   /// Action button color
   #[serde(default)]
   pub button:    Option<String>,
+}
+
+/// Background animation configuration. Each animation kind owns its own
+/// namespaced sub-section so new animations can be added without collisions.
+/// Distinct from upstream's `[animations]` section, which configures the
+/// foreground tachyonfx post-processor.
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
+pub struct BackgroundConfig {
+  /// Which animation to run. `None` or `"none"` disables animations.
+  /// Currently supported: `"doom"`.
+  #[serde(default)]
+  pub kind: Option<String>,
+
+  /// Render frame rate when an animation is active. Defaults to 30 FPS when
+  /// `kind` is set; the base UI tick (2 FPS) otherwise.
+  #[serde(default)]
+  pub fps: Option<u32>,
+
+  /// Parameters for the DOOM-style fire effect.
+  #[serde(default)]
+  pub doom: DoomConfig,
+}
+
+/// Parameters for the DOOM-style fire animation. Field names mirror Ly's
+/// `doom_fire_*` config keys.
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
+pub struct DoomConfig {
+  /// Decay control (1..=9). Higher = taller flames.
+  #[serde(default)]
+  pub height: Option<u8>,
+
+  /// Horizontal jitter range (0..=4).
+  #[serde(default)]
+  pub spread: Option<u8>,
+
+  /// Color of the coolest flame tips. Accepts `#RRGGBB`, `0xRRGGBB`, or any
+  /// color name accepted by ratatui (e.g. `red`, `magenta`).
+  #[serde(default)]
+  pub top_color: Option<String>,
+
+  /// Color of the mid-band flames.
+  #[serde(default)]
+  pub middle_color: Option<String>,
+
+  /// Color of the hottest flames at the base.
+  #[serde(default)]
+  pub bottom_color: Option<String>,
 }
 
 /// Greeting alignment options

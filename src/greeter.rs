@@ -47,12 +47,16 @@ use crate::{
   },
   power::PowerOption,
   ui::{
+    bg_animation::{self, Animation, AnimationSpec},
     common::{masked::MaskedString, menu::Menu},
     power::Power,
     sessions::{Session, SessionSource, SessionType},
     users::User,
   },
 };
+
+/// Default render rate when animation is enabled
+pub const ANIMATION_DEFAULT_FPS: u32 = 30;
 
 const DEFAULT_LOCALE: Locale = Locale::en_US;
 
@@ -140,6 +144,11 @@ pub struct Greeter {
   pub kb_sessions: u8,
   pub kb_power:    u8,
 
+  // Background animation, drawn before the login UI.
+  pub animation:     Option<Box<dyn Animation>>,
+  // Configured animation FPS, when an animation is active.
+  pub animation_fps: Option<u32>,
+
   // The software is waiting for a response from `greetd`.
   pub working: bool,
   // We are done working.
@@ -191,6 +200,8 @@ impl Default for Greeter {
       kb_command:            2,
       kb_sessions:           3,
       kb_power:              12,
+      animation:             None,
+      animation_fps:         None,
       working:               false,
       done:                  false,
       exit:                  None,
@@ -755,6 +766,37 @@ impl Greeter {
     opts.optflag("", "dump-config", "print effective configuration and exit");
     opts.optflag("", "list-outputs", "list available DRM outputs and exit");
 
+    opts.optopt(
+      "",
+      "background",
+      "background animation to render behind the login UI ('doom' or 'none')",
+      "NAME",
+    );
+    opts.optopt(
+      "",
+      "background-fps",
+      "render rate when a background animation is active (default: 30)",
+      "FPS",
+    );
+    opts.optopt(
+      "",
+      "doom-height",
+      "DOOM fire decay control, higher means taller flames (1-9, default: 6)",
+      "N",
+    );
+    opts.optopt(
+      "",
+      "doom-spread",
+      "DOOM fire horizontal jitter (0-4, default: 2)",
+      "N",
+    );
+    opts.optopt(
+      "",
+      "doom-colors",
+      "DOOM fire colors as TOP,MIDDLE,BOTTOM (each #RRGGBB or named)",
+      "TOP,MIDDLE,BOTTOM",
+    );
+
     opts
   }
 
@@ -976,7 +1018,61 @@ impl Greeter {
       return Err("keybindings must all be distinct".into());
     }
 
+    let cli_config =
+      tuigreet::config::parser::extract_cli_config(self.config());
+    self.set_background_from_config(&cli_config.background);
+
     Ok(())
+  }
+
+  /// Build (or clear) [`Self::animation`] from a [`BackgroundConfig`].
+  fn set_background_from_config(
+    &mut self,
+    cfg: &tuigreet::config::BackgroundConfig,
+  ) {
+    use crate::ui::bg_animation::{Kind, doom};
+
+    let Some(kind) = cfg.kind.as_deref().and_then(Kind::from_name) else {
+      if let Some(name) = cfg.kind.as_deref()
+        && !name.trim().is_empty()
+        && !name.eq_ignore_ascii_case("none")
+      {
+        tracing::warn!(
+          "unknown background animation kind '{}', ignoring",
+          name
+        );
+      }
+      self.animation = None;
+      self.animation_fps = None;
+      return;
+    };
+
+    let parse = |s: &Option<String>, fallback: tui::style::Color| {
+      s.as_deref()
+        .and_then(bg_animation::parse_color)
+        .unwrap_or(fallback)
+    };
+
+    let spec = match kind {
+      Kind::Doom => {
+        let d = doom::Options::default();
+        AnimationSpec::Doom(doom::Options {
+          height: cfg.doom.height.unwrap_or(d.height),
+          spread: cfg.doom.spread.unwrap_or(d.spread),
+          top:    parse(&cfg.doom.top_color, d.top),
+          middle: parse(&cfg.doom.middle_color, d.middle),
+          bottom: parse(&cfg.doom.bottom_color, d.bottom),
+        })
+      },
+    };
+    self.animation = Some(bg_animation::build(&spec));
+    self.animation_fps = Some(cfg.fps.unwrap_or(ANIMATION_DEFAULT_FPS));
+  }
+
+  /// Render rate for the event loop.
+  #[must_use]
+  pub fn frame_rate(&self) -> f64 {
+    self.animation_fps.map_or(2.0, |fps| fps.max(1) as f64)
   }
 
   pub fn set_prompt(&mut self, prompt: &str) {
@@ -1072,6 +1168,8 @@ impl Greeter {
     self.kb_command = config.keybindings.command;
     self.kb_sessions = config.keybindings.sessions;
     self.kb_power = config.keybindings.power;
+    // Animation
+    self.set_background_from_config(&config.background);
   }
 
   // Apply theme configuration

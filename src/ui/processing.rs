@@ -3,7 +3,7 @@ use std::error::Error;
 use tui::{
   layout::{Alignment, Constraint, Direction, Layout, Rect},
   text::Span,
-  widgets::{Block, BorderType, Borders, Paragraph},
+  widgets::{Block, BorderType, Borders, Clear, Paragraph},
 };
 
 use crate::{
@@ -24,6 +24,11 @@ pub fn draw_with_area(
   let y = (size.height - height) / 2;
 
   let container = Rect::new(x, y, width, height);
+
+  if greeter.animation.is_some() {
+    f.render_widget(Clear, container);
+  }
+
   let container_padding = greeter.container_padding();
   let frame = Rect::new(
     x + container_padding,
