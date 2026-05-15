@@ -36,6 +36,7 @@ async fn main() {
   let backend = CrosstermBackend::new(io::stdout());
   let events = Events::new().await;
   let greeter = Greeter::new(events.sender()).await;
+  events.set_frame_rate(greeter.frame_rate());
 
   if let Err(error) = run(backend, greeter, events).await {
     if matches!(
@@ -161,6 +162,8 @@ where
         // Config was hot reloaded, force a render
         ui::draw(greeter.clone(), &mut terminal).await?;
       },
+
+      Some(Event::SetFrameRate(fps)) => events.set_frame_rate(fps),
 
       _ => {},
     }

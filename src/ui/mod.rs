@@ -1,5 +1,6 @@
 //! UI rendering and component modules
 
+pub mod bg_animation;
 mod command;
 pub mod common;
 mod i18n;
@@ -72,8 +73,15 @@ where
   let hide_cursor = should_hide_cursor(&greeter);
 
   terminal.draw(|f| {
+    let area = f.area();
+    if let Some(anim) = greeter.animation.as_mut() {
+      anim.resize(area);
+      anim.step();
+      anim.render(area, f.buffer_mut());
+    }
+
     let theme = &greeter.theme;
-    let size = f.area();
+    let size = area;
     let time_position = get_widget_position(&greeter, "time");
     let status_position = get_widget_position(&greeter, "status");
 

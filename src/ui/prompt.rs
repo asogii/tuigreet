@@ -4,7 +4,7 @@ use rand::{RngExt, SeedableRng, prelude::StdRng};
 use tui::{
   layout::{Alignment, Constraint, Direction, Layout, Rect},
   text::Span,
-  widgets::{Block, BorderType, Borders, Paragraph},
+  widgets::{Block, BorderType, Borders, Clear, Paragraph},
 };
 use tuigreet::{GreetAlign, Mode, SecretDisplay};
 
@@ -55,6 +55,13 @@ pub fn draw_with_area(
     width - (2 * container_padding),
     height - (2 * container_padding),
   );
+
+  // Wipe any animation pixels from the container area before drawing the
+  // prompt; ratatui's Block patches style only and would leave the fire
+  // glyphs visible underneath the form.
+  if greeter.animation.is_some() {
+    f.render_widget(Clear, container);
+  }
 
   let mut block = Block::default()
     .title_style(theme.of(&[Themed::Title]))

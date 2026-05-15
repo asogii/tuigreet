@@ -99,6 +99,28 @@ hitting `F2` and amending the command. Alternatively, you can list the
 system-declared sessions (or custom ones) by hitting `F3`. Power options are
 available through `F12`.
 
+### Background animations
+
+tuigreet can paint an animated backdrop behind the login form. Animations are
+off by default and selected by name with `--background <name>`, or by setting
+`kind` in the `[background]` section of your config file. The login form is
+drawn on top of the animation and clears the cells it occupies, so the
+prompt remains legible regardless of what the backdrop is doing.
+
+Frame rate is configurable through `--background-fps`, and defaults to 30 FPS
+while an animation is active (the UI otherwise ticks at the usual 2 FPS).
+Setting `--background none` (or omitting the flag) disables the feature
+entirely, in which case there is no per-frame cost.
+
+The following animation is available out of the box:
+
+- `doom` — The classic DOOM fire effect. Two parameters control the shape
+  of the flames: `--doom-height` (decay control, 1–9, default `6`) makes
+  flames taller at higher values, and `--doom-spread` (horizontal jitter,
+  0–4, default `2`) widens them. The three color bands are set together
+  with `--doom-colors TOP,MIDDLE,BOTTOM` — each accepts `#RRGGBB`,
+  `0xRRGGBB`, or any named color.
+
 ## Installing Tuigreet
 
 [releases tab]: https://github.com/NotAShelf/tuigreet/releases/latest
@@ -265,6 +287,17 @@ characters = "*"
 command = 2   # F2
 sessions = 3  # F3
 power = 12    # F12
+
+[background]
+kind = "doom"        # or "none" to disable
+fps = 30
+
+[background.doom]
+height = 6           # 1-9, taller flames at higher values
+spread = 2           # 0-4, horizontal jitter
+top_color = "#9F2707"
+middle_color = "#C78F17"
+bottom_color = "#FFFFFF"
 
 [session]
 sessions_dirs = ["/usr/share/wayland-sessions", "/usr/share/xsessions"]

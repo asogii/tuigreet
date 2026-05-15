@@ -4,7 +4,7 @@ use tui::{
   prelude::Rect,
   style::{Modifier, Style},
   text::Span,
-  widgets::{Block, BorderType, Borders, Paragraph},
+  widgets::{Block, BorderType, Borders, Clear, Paragraph},
 };
 
 use super::style::Themed;
@@ -58,6 +58,10 @@ where
       get_rect_bounds(greeter, size, self.options.len());
 
     let container = Rect::new(x, y, width, height);
+
+    if greeter.animation.is_some() {
+      f.render_widget(Clear, container);
+    }
 
     let title = Span::from(titleize(&self.title));
     let block = Block::default()

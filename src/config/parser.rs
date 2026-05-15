@@ -195,6 +195,29 @@ fn apply_config_layer(dest: &mut Config, src: Config) {
     dest.keybindings.power = src.keybindings.power;
   }
 
+  // Background animation
+  if src.background.kind.is_some() {
+    dest.background.kind = src.background.kind;
+  }
+  if src.background.fps.is_some() {
+    dest.background.fps = src.background.fps;
+  }
+  if src.background.doom.height.is_some() {
+    dest.background.doom.height = src.background.doom.height;
+  }
+  if src.background.doom.spread.is_some() {
+    dest.background.doom.spread = src.background.doom.spread;
+  }
+  if src.background.doom.top_color.is_some() {
+    dest.background.doom.top_color = src.background.doom.top_color;
+  }
+  if src.background.doom.middle_color.is_some() {
+    dest.background.doom.middle_color = src.background.doom.middle_color;
+  }
+  if src.background.doom.bottom_color.is_some() {
+    dest.background.doom.bottom_color = src.background.doom.bottom_color;
+  }
+
   // Outputs: a non-empty list from a higher-priority layer fully replaces
   if !src.outputs.is_empty() {
     dest.outputs = src.outputs;
@@ -459,6 +482,33 @@ pub fn extract_cli_config(matches: &getopts::Matches) -> Config {
   if matches.opt_present("power-no-setsid") {
     config.power.use_setsid = false;
   }
+  // Background animation config
+  if let Some(kind) = matches.opt_str("background") {
+    config.background.kind = Some(kind);
+  }
+  if let Some(fps) = matches.opt_str("background-fps")
+    && let Ok(v) = fps.parse::<u32>()
+  {
+    config.background.fps = Some(v);
+  }
+  if let Some(h) = matches.opt_str("doom-height")
+    && let Ok(v) = h.parse::<u8>()
+  {
+    config.background.doom.height = Some(v);
+  }
+  if let Some(s) = matches.opt_str("doom-spread")
+    && let Ok(v) = s.parse::<u8>()
+  {
+    config.background.doom.spread = Some(v);
+  }
+  if let Some(colors) = matches.opt_str("doom-colors") {
+    let parts: Vec<&str> = colors.split(',').map(str::trim).collect();
+    if parts.len() == 3 {
+      config.background.doom.top_color = Some(parts[0].to_string());
+      config.background.doom.middle_color = Some(parts[1].to_string());
+      config.background.doom.bottom_color = Some(parts[2].to_string());
+    }
+  }
   config
 }
 
@@ -691,6 +741,12 @@ impl Config {
         "Both remember.session and remember.user_session are enabled"
           .to_string(),
       );
+    }
+
+    // Warn about invalid fps settings
+    if self.background.fps.is_some_and(|f| f == 0) {
+      warnings
+        .push("Background fps is set to 0, this will be ignored".to_string());
     }
   }
 

@@ -773,3 +773,50 @@ async fn test_theme_with_time_widget() {
     "Theme color (lightred) should be applied somewhere in the UI"
   );
 }
+
+#[tokio::test]
+async fn test_doom_animation_renders_and_form_stays_legible() {
+  use crate::ui::bg_animation::{self as animation, AnimationSpec, doom};
+
+  let greeter = test_greeter();
+  {
+    let mut g = greeter.write().await;
+    g.mode = Mode::Username;
+    g.animation = Some(animation::build(&AnimationSpec::Doom(
+      doom::Options::default(),
+    )));
+  }
+
+  // Render a few frames so the fire actually propagates upward.
+  let mut buffer = render_ui(greeter.clone(), 80, 24).await;
+  for _ in 0..40 {
+    buffer = render_ui(greeter.clone(), 80, 24).await;
+  }
+
+  // Some cell on the bottom row should be a fire glyph — the bottom is
+  // re-stamped to STEPS=12 every frame.
+  let bottom = 23u16;
+  let fire_glyphs = ['░', '▒', '▓', '█'];
+  let bottom_has_fire = (0..80).any(|x| {
+    buffer[(x, bottom)]
+      .symbol()
+      .chars()
+      .next()
+      .map(|c| fire_glyphs.contains(&c))
+      .unwrap_or(false)
+  });
+  assert!(bottom_has_fire, "fire should render on the bottom row");
+
+  // The login form sits in the middle of the screen; its inner cells must
+  // not contain fire glyphs because Clear wipes them before the form draws.
+  let form_y = 12u16;
+  let form_has_fire = (20..60).any(|x| {
+    buffer[(x, form_y)]
+      .symbol()
+      .chars()
+      .next()
+      .map(|c| fire_glyphs.contains(&c))
+      .unwrap_or(false)
+  });
+  assert!(!form_has_fire, "fire must not bleed through the login form");
+}
