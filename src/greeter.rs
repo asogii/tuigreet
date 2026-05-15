@@ -1046,6 +1046,7 @@ impl Greeter {
       }
       self.animation = None;
       self.animation_fps = None;
+      self.push_frame_rate();
       return;
     };
 
@@ -1069,6 +1070,7 @@ impl Greeter {
     };
     self.animation = Some(bg_animation::build(&spec));
     self.animation_fps = Some(cfg.fps.unwrap_or(ANIMATION_DEFAULT_FPS));
+    self.push_frame_rate();
   }
 
   /// Render rate for the event loop.
@@ -1077,6 +1079,17 @@ impl Greeter {
     self
       .animation_fps
       .map_or(DEFAULT_FPS as f64, |fps| fps.max(DEFAULT_FPS) as f64)
+  }
+
+  /// Push the current frame rate to the event loop.
+  fn push_frame_rate(&self) {
+    if let Some(tx) = &self.events {
+      let fps = self.frame_rate();
+      let tx = tx.clone();
+      tokio::spawn(async move {
+        let _ = tx.send(Event::SetFrameRate(fps)).await;
+      });
+    }
   }
 
   pub fn set_prompt(&mut self, prompt: &str) {

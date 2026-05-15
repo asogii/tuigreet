@@ -38,6 +38,9 @@ pub enum Event {
 
   /// UI refresh
   Refresh,
+
+  /// Update the render tick rate
+  SetFrameRate(f64),
 }
 
 /// Event channel for receiving terminal and internal events

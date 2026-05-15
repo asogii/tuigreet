@@ -163,6 +163,8 @@ where
         ui::draw(greeter.clone(), &mut terminal).await?;
       },
 
+      Some(Event::SetFrameRate(fps)) => events.set_frame_rate(fps),
+
       _ => {},
     }
   }
