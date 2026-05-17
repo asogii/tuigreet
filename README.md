@@ -597,6 +597,17 @@ Which results in the following:
 
 ![Screenshot of tuigreet](https://github.com/NotAShelf/tuigreet/blob/master/contrib/assets/screenshot-themed.png)
 
+### Visual mock-up mode
+
+For previewing themes, animations, or layout changes without a running greetd,
+pass `--mock`. tuigreet will run as normal, but emulate auth flow locally. 
+
+```sh
+tuigreet --mock
+```
+
+`GREETD_SOCK` does not need to be set in this mode.
+
 ## Running the tests
 
 Tests from the default features should run without any special consideration by

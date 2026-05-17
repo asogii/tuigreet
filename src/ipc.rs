@@ -79,11 +79,10 @@ impl Ipc {
     if let Some(request) = request {
       let stream = {
         let greeter = greeter.read().await;
-
-        greeter.stream.as_ref().unwrap().clone()
+        greeter.stream.as_ref().map(Arc::clone)
       };
 
-      let response = {
+      let response = if let Some(stream) = stream {
         let mut stream_guard = stream.write().await;
         request.write_to(&mut *stream_guard).await?;
         let response = Response::read_from(&mut *stream_guard).await?;
@@ -92,6 +91,10 @@ impl Ipc {
         greeter.write().await.working = false;
 
         response
+      } else {
+        // Mock mode is on, emulate a plausible response
+        greeter.write().await.working = false;
+        mock_response(&request)
       };
 
       self
@@ -295,9 +298,29 @@ impl Ipc {
   pub async fn cancel(greeter: &mut Greeter) {
     tracing::info!("cancelling session");
 
+    if greeter.stream.is_none() {
+      return;
+    }
+
     let _ = Request::CancelSession
       .write_to(&mut *greeter.stream().await)
       .await;
+  }
+}
+
+// Mocks regular greetd behaviour for UI tests
+fn mock_response(request: &Request) -> Response {
+  match request {
+    Request::CreateSession { .. } => {
+      Response::AuthMessage {
+        auth_message_type: AuthMessageType::Secret,
+        auth_message:      "Password: ".to_string(),
+      }
+    },
+    Request::PostAuthMessageResponse { .. } | Request::StartSession { .. } => {
+      Response::Success
+    },
+    Request::CancelSession => Response::Success,
   }
 }
 

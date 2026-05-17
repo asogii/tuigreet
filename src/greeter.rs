@@ -150,6 +150,8 @@ pub struct Greeter {
   pub animation:     Option<Box<dyn Animation>>,
   // Configured animation FPS, when an animation is active.
   pub animation_fps: Option<u32>,
+  // Skip greetd socket and simulate auth flow locally for UI testing
+  pub mock:          bool,
 
   // The software is waiting for a response from `greetd`.
   pub working: bool,
@@ -204,6 +206,7 @@ impl Default for Greeter {
       kb_power:              12,
       animation:             None,
       animation_fps:         None,
+      mock:                  false,
       working:               false,
       done:                  false,
       exit:                  None,
@@ -313,7 +316,11 @@ impl Greeter {
       greeter.connect().await;
     }
 
-    let sessions = get_sessions(&greeter).unwrap_or_default();
+    let mut sessions = get_sessions(&greeter).unwrap_or_default();
+
+    if greeter.mock && sessions.is_empty() {
+      sessions = mock_sessions();
+    }
 
     if matches!(greeter.session_source, SessionSource::None)
       && !sessions.is_empty()
@@ -417,6 +424,11 @@ impl Greeter {
 
   // Connect to `greetd` and return a stream we can safely write to.
   pub async fn connect(&mut self) {
+    if self.mock {
+      tracing::info!("mock mode: skipping greetd socket connect");
+      return;
+    }
+
     // If socket is not already set (by tests), read from environment
     if self.socket.is_empty() {
       self.socket = if let Ok(socket) = env::var("GREETD_SOCK") {
@@ -798,6 +810,12 @@ impl Greeter {
       "DOOM fire colors as TOP,MIDDLE,BOTTOM (each #RRGGBB or named)",
       "TOP,MIDDLE,BOTTOM",
     );
+    opts.optflag(
+      "",
+      "mock",
+      "visual mock-up mode: skip the greetd socket and fake the auth flow \
+       locally",
+    );
 
     opts
   }
@@ -829,6 +847,8 @@ impl Greeter {
     if self.config().opt_present("list-outputs") {
       crate::output::list_outputs();
     }
+
+    self.mock = self.config().opt_present("mock");
 
     if self.config().opt_present("debug") {
       self.debug = true;
@@ -1220,6 +1240,27 @@ impl Default for TitleOption {
       custom: None,
     }
   }
+}
+
+// Mock session list used to pad otherwise empty session menu
+fn mock_sessions() -> Vec<Session> {
+  [
+    ("mock-wayland", "Mock Wayland", SessionType::Wayland),
+    ("mock-x11", "Mock X11", SessionType::X11),
+    ("mock-shell", "Mock shell", SessionType::None),
+  ]
+  .into_iter()
+  .map(|(slug, name, session_type)| {
+    Session {
+      slug: Some(slug.to_string()),
+      name: name.to_string(),
+      command: "true".to_string(),
+      session_type,
+      path: None,
+      xdg_desktop_names: None,
+    }
+  })
+  .collect()
 }
 
 fn print_usage(opts: Options) {
