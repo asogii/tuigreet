@@ -1,5 +1,6 @@
 //! UI rendering and component modules
 
+pub mod background;
 pub mod bg_animation;
 mod command;
 pub mod common;
@@ -46,6 +47,7 @@ enum Button {
   Command,
   Session,
   Power,
+  Background,
   Other,
 }
 
@@ -186,6 +188,14 @@ where
         status_label(theme, format!("F{}", greeter.kb_power)),
         status_value(&greeter, theme, Button::Power, fl!("action_power")),
         Span::from(" "),
+        status_label(theme, format!("F{}", greeter.kb_background)),
+        status_value(
+          &greeter,
+          theme,
+          Button::Background,
+          fl!("action_background"),
+        ),
+        Span::from(" "),
         status_label(theme, session_source_label),
         status_value(&greeter, theme, Button::Other, session_source),
       ]);
@@ -213,6 +223,12 @@ where
         greeter.sessions.draw_with_area(&greeter, f, main_area).ok()
       },
       Mode::Power => greeter.powers.draw_with_area(&greeter, f, main_area).ok(),
+      Mode::Background => {
+        greeter
+          .backgrounds
+          .draw_with_area(&greeter, f, main_area)
+          .ok()
+      },
       Mode::Users => greeter.users.draw_with_area(&greeter, f, main_area).ok(),
       Mode::Processing => {
         self::processing::draw_with_area(&mut greeter, f, main_area).ok()
@@ -266,6 +282,7 @@ where
     Button::Command => Mode::Command,
     Button::Session => Mode::Sessions,
     Button::Power => Mode::Power,
+    Button::Background => Mode::Background,
 
     _ => {
       return Span::from(buttonize(&text.into()))

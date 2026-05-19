@@ -120,6 +120,18 @@ The following animation is available out of the box:
   0–4, default `2`) widens them. The three color bands are set together
   with `--doom-colors TOP,MIDDLE,BOTTOM` — each accepts `#RRGGBB`,
   `0xRRGGBB`, or any named color.
+- `matrix` — Falling green digital rain. Stream length is set
+  with `--matrix-length MIN,MAX` (rows, default `6,18`) and fall speed
+  with `--matrix-speed MIN,MAX` (rows-per-frame, default `0.30,1.10`); the
+  three color bands are set together with `--matrix-colors HEAD,BRIGHT,DIM`.
+
+You can also switch animations on the fly without restarting the greeter
+by hitting `F4`. This opens a small menu listing every available
+animation plus a `None` entry to disable the backdrop; selection rebuilds
+the active animation with that kind's default options. The hotkey is
+configurable through `--kb-background` or the `background` field of the
+`[keybindings]` section, the same way the existing F2/F3/F12 menus are
+configured.
 
 ## Installing Tuigreet
 
@@ -284,9 +296,10 @@ mode = "characters"  # "hidden" or "characters"
 characters = "*"
 
 [keybindings]
-command = 2   # F2
-sessions = 3  # F3
-power = 12    # F12
+command = 2     # F2
+sessions = 3    # F3
+background = 4  # F4
+power = 12      # F12
 
 [background]
 kind = "doom"        # or "none" to disable
@@ -298,6 +311,16 @@ spread = 2           # 0-4, horizontal jitter
 top_color = "#9F2707"
 middle_color = "#C78F17"
 bottom_color = "#FFFFFF"
+
+[background.matrix]
+head_color = "#CCFFCC"
+bright_color = "#33FF66"
+dim_color = "#006622"
+min_length = 6
+max_length = 18
+min_speed = 0.30     # rows per frame
+max_speed = 1.10
+mutate_chance = 0.02 # per-cell glyph shimmer probability
 
 [session]
 sessions_dirs = ["/usr/share/wayland-sessions", "/usr/share/xsessions"]

@@ -55,6 +55,8 @@ pub enum Mode {
 
   /// Power menu (shutdown/reboot)
   Power,
+  /// Background animation selection menu
+  Background,
   /// Processing/authenticating state
   Processing,
 }

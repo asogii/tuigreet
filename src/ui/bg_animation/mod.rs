@@ -1,6 +1,7 @@
 //! Background animations rendered behind the login UI.
 
 pub mod doom;
+pub mod matrix;
 
 use std::str::FromStr;
 
@@ -22,13 +23,37 @@ pub trait Animation: Send + Sync {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
   Doom,
+  Matrix,
 }
+
+/// Catalog entry for a registered animation kind.
+#[allow(dead_code)]
+pub struct KindInfo {
+  pub kind:  Kind,
+  pub name:  &'static str,
+  pub label: &'static str,
+}
+
+/// Every registered animation kind, in menu display order.
+pub const KINDS: &[KindInfo] = &[
+  KindInfo {
+    kind:  Kind::Doom,
+    name:  "doom",
+    label: "DOOM Fire",
+  },
+  KindInfo {
+    kind:  Kind::Matrix,
+    name:  "matrix",
+    label: "Matrix",
+  },
+];
 
 impl Kind {
   /// Resolve a config string to a [`Kind`], or `None` for unknown / disabled.
   pub fn from_name(name: &str) -> Option<Self> {
     match name.trim().to_ascii_lowercase().as_str() {
       "doom" | "fire" => Some(Self::Doom),
+      "matrix" | "cmatrix" => Some(Self::Matrix),
       _ => None,
     }
   }
@@ -38,13 +63,31 @@ impl Kind {
 #[derive(Debug, Clone)]
 pub enum AnimationSpec {
   Doom(doom::Options),
+  Matrix(matrix::Options),
 }
 
 /// Construct an animation matching `spec`'s variant.
 pub fn build(spec: &AnimationSpec) -> Box<dyn Animation> {
   match spec {
     AnimationSpec::Doom(opts) => Box::new(doom::Doom::new(opts.clone())),
+    AnimationSpec::Matrix(opts) => Box::new(matrix::Matrix::new(opts.clone())),
   }
+}
+
+impl Kind {
+  /// Build a spec for this kind using its `Options::default()`.
+  #[must_use]
+  pub fn default_spec(self) -> AnimationSpec {
+    match self {
+      Self::Doom => AnimationSpec::Doom(doom::Options::default()),
+      Self::Matrix => AnimationSpec::Matrix(matrix::Options::default()),
+    }
+  }
+}
+
+/// Build an animation of the given kind using its default options.
+pub fn build_default(kind: Kind) -> Box<dyn Animation> {
+  build(&kind.default_spec())
 }
 
 /// Parse a color from `#RRGGBB`, `0xRRGGBB`, or any string accepted by
@@ -95,6 +138,7 @@ mod tests {
     assert_eq!(Kind::from_name("fire"), Some(Kind::Doom));
     assert_eq!(Kind::from_name("none"), None);
     assert_eq!(Kind::from_name(""), None);
-    assert_eq!(Kind::from_name("matrix"), None);
+    assert_eq!(Kind::from_name("matrix"), Some(Kind::Matrix));
+    assert_eq!(Kind::from_name("CMATRIX"), Some(Kind::Matrix));
   }
 }

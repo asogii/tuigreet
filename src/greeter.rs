@@ -47,6 +47,7 @@ use crate::{
   },
   power::PowerOption,
   ui::{
+    background::Background,
     bg_animation::{self, Animation, AnimationSpec},
     common::{masked::MaskedString, menu::Menu},
     power::Power,
@@ -142,9 +143,10 @@ pub struct Greeter {
   // Whether to prefix the power commands with `setsid`.
   pub power_setsid: bool,
 
-  pub kb_command:  u8,
-  pub kb_sessions: u8,
-  pub kb_power:    u8,
+  pub kb_command:    u8,
+  pub kb_sessions:   u8,
+  pub kb_power:      u8,
+  pub kb_background: u8,
 
   // Background animation, drawn before the login UI.
   pub animation:     Option<Box<dyn Animation>>,
@@ -152,6 +154,8 @@ pub struct Greeter {
   pub animation_fps: Option<u32>,
   // Skip greetd socket and simulate auth flow locally for UI testing
   pub mock:          bool,
+  // Menu for the on-the-fly background switcher (F4 by default).
+  pub backgrounds:   Menu<Background>,
 
   // The software is waiting for a response from `greetd`.
   pub working: bool,
@@ -204,9 +208,11 @@ impl Default for Greeter {
       kb_command:            2,
       kb_sessions:           3,
       kb_power:              12,
+      kb_background:         4,
       animation:             None,
       animation_fps:         None,
       mock:                  false,
+      backgrounds:           Menu::default(),
       working:               false,
       done:                  false,
       exit:                  None,
@@ -774,6 +780,12 @@ impl Greeter {
       "F-key to use to open the power menu",
       "[1-12]",
     );
+    opts.optopt(
+      "",
+      "kb-background",
+      "F-key to use to open the background animation switcher menu",
+      "[1-12]",
+    );
 
     opts.optopt("", "config", "path to configuration file", "PATH");
     opts.optflag("", "no-config", "disable loading configuration files");
@@ -815,6 +827,25 @@ impl Greeter {
       "mock",
       "visual mock-up mode: skip the greetd socket and fake the auth flow \
        locally",
+    );
+    opts.optopt(
+      "",
+      "matrix-colors",
+      "matrix rain colors as HEAD,BRIGHT,DIM (each #RRGGBB or named)",
+      "HEAD,BRIGHT,DIM",
+    );
+    opts.optopt(
+      "",
+      "matrix-length",
+      "matrix trail length range as MIN,MAX in rows (default: 6,18)",
+      "MIN,MAX",
+    );
+    opts.optopt(
+      "",
+      "matrix-speed",
+      "matrix fall speed range as MIN,MAX in rows-per-frame (default: \
+       0.30,1.10)",
+      "MIN,MAX",
     );
 
     opts
@@ -1032,27 +1063,81 @@ impl Greeter {
       .config()
       .opt_str("kb-power")
       .map_or(12, |i| i.parse::<u8>().unwrap_or_default());
+    self.kb_background = self
+      .config()
+      .opt_str("kb-background")
+      .map_or(4, |i| i.parse::<u8>().unwrap_or_default());
 
-    if self.kb_command == self.kb_sessions
-      || self.kb_sessions == self.kb_power
-      || self.kb_power == self.kb_command
-    {
-      return Err("keybindings must all be distinct".into());
+    let kbs = [
+      self.kb_command,
+      self.kb_sessions,
+      self.kb_power,
+      self.kb_background,
+    ];
+    for i in 0..kbs.len() {
+      for j in (i + 1)..kbs.len() {
+        if kbs[i] == kbs[j] {
+          return Err("keybindings must all be distinct".into());
+        }
+      }
     }
 
     let cli_config =
       tuigreet::config::parser::extract_cli_config(self.config());
     self.set_background_from_config(&cli_config.background);
+    self.populate_backgrounds_menu();
 
     Ok(())
   }
 
-  /// Build (or clear) [`Self::animation`] from a [`BackgroundConfig`].
+  fn populate_backgrounds_menu(&mut self) {
+    let title = fl!("title_background");
+    let none_label = fl!("background_none");
+    let options = crate::ui::background::options(&none_label);
+    // Highlight the first concrete kind when an animation is active,
+    // otherwise the synthetic "None" at index 0.
+    let selected = if self.animation.is_none() {
+      0
+    } else {
+      1.min(options.len() - 1)
+    };
+
+    self.backgrounds = Menu {
+      title,
+      options,
+      selected,
+    };
+  }
+
+  pub fn apply_background_selection(&mut self) {
+    let Some(item) = self.backgrounds.options.get(self.backgrounds.selected)
+    else {
+      return;
+    };
+    match item.kind {
+      None => {
+        self.animation = None;
+        self.animation_fps = None;
+      },
+      Some(kind) => {
+        self.animation = Some(bg_animation::build_default(kind));
+        self.animation_fps = Some(ANIMATION_DEFAULT_FPS);
+      },
+    }
+    self.push_frame_rate();
+    if let Some(ref sender) = self.events {
+      let sender = sender.clone();
+      tokio::spawn(async move {
+        let _ = sender.send(crate::event::Event::Refresh).await;
+      });
+    }
+  }
+
   fn set_background_from_config(
     &mut self,
     cfg: &tuigreet::config::BackgroundConfig,
   ) {
-    use crate::ui::bg_animation::{Kind, doom};
+    use crate::ui::bg_animation::{Kind, doom, matrix};
 
     let Some(kind) = cfg.kind.as_deref().and_then(Kind::from_name) else {
       if let Some(name) = cfg.kind.as_deref()
@@ -1085,6 +1170,19 @@ impl Greeter {
           top:    parse(&cfg.doom.top_color, d.top),
           middle: parse(&cfg.doom.middle_color, d.middle),
           bottom: parse(&cfg.doom.bottom_color, d.bottom),
+        })
+      },
+      Kind::Matrix => {
+        let d = matrix::Options::default();
+        AnimationSpec::Matrix(matrix::Options {
+          head:          parse(&cfg.matrix.head_color, d.head),
+          bright:        parse(&cfg.matrix.bright_color, d.bright),
+          dim:           parse(&cfg.matrix.dim_color, d.dim),
+          min_length:    cfg.matrix.min_length.unwrap_or(d.min_length),
+          max_length:    cfg.matrix.max_length.unwrap_or(d.max_length),
+          min_speed:     cfg.matrix.min_speed.unwrap_or(d.min_speed),
+          max_speed:     cfg.matrix.max_speed.unwrap_or(d.max_speed),
+          mutate_chance: cfg.matrix.mutate_chance.unwrap_or(d.mutate_chance),
         })
       },
     };
@@ -1239,8 +1337,10 @@ impl Greeter {
     self.kb_command = config.keybindings.command;
     self.kb_sessions = config.keybindings.sessions;
     self.kb_power = config.keybindings.power;
+    self.kb_background = config.keybindings.background;
     // Animation
     self.set_background_from_config(&config.background);
+    self.populate_backgrounds_menu();
   }
 
   // Apply theme configuration

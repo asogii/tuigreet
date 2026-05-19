@@ -376,14 +376,19 @@ pub struct KeybindingsConfig {
   /// F-key for power menu (1-12)
   #[serde(default = "default_kb_power")]
   pub power: u8,
+
+  /// F-key for the on-the-fly background switcher menu (1-12)
+  #[serde(default = "default_kb_background")]
+  pub background: u8,
 }
 
 impl Default for KeybindingsConfig {
   fn default() -> Self {
     Self {
-      command:  default_kb_command(),
-      sessions: default_kb_sessions(),
-      power:    default_kb_power(),
+      command:    default_kb_command(),
+      sessions:   default_kb_sessions(),
+      power:      default_kb_power(),
+      background: default_kb_background(),
     }
   }
 }
@@ -427,10 +432,10 @@ pub struct ThemeConfig {
 /// namespaced sub-section so new animations can be added without collisions.
 /// Distinct from upstream's `[animations]` section, which configures the
 /// foreground tachyonfx post-processor.
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
 pub struct BackgroundConfig {
   /// Which animation to run. `None` or `"none"` disables animations.
-  /// Currently supported: `"doom"`.
+  /// Currently supported: `"doom"`, `"matrix"`.
   #[serde(default)]
   pub kind: Option<String>,
 
@@ -442,6 +447,10 @@ pub struct BackgroundConfig {
   /// Parameters for the DOOM-style fire effect.
   #[serde(default)]
   pub doom: DoomConfig,
+
+  /// Parameters for the cmatrix-style digital rain effect.
+  #[serde(default)]
+  pub matrix: MatrixConfig,
 }
 
 /// Parameters for the DOOM-style fire animation. Field names mirror Ly's
@@ -468,6 +477,44 @@ pub struct DoomConfig {
   /// Color of the hottest flames at the base.
   #[serde(default)]
   pub bottom_color: Option<String>,
+}
+
+/// Parameters for the cmatrix-style digital rain animation.
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
+pub struct MatrixConfig {
+  /// Color of the leading glyph in each falling stream. Accepts `#RRGGBB`,
+  /// `0xRRGGBB`, or any color name accepted by ratatui.
+  #[serde(default)]
+  pub head_color: Option<String>,
+
+  /// Color of the brightest part of the trail (just behind the head).
+  #[serde(default)]
+  pub bright_color: Option<String>,
+
+  /// Color of the dim tail before each glyph fades out.
+  #[serde(default)]
+  pub dim_color: Option<String>,
+
+  /// Inclusive minimum trail length in rows.
+  #[serde(default)]
+  pub min_length: Option<u16>,
+
+  /// Inclusive maximum trail length in rows.
+  #[serde(default)]
+  pub max_length: Option<u16>,
+
+  /// Inclusive minimum stream speed, in rows-per-frame. Lower = slower.
+  #[serde(default)]
+  pub min_speed: Option<f32>,
+
+  /// Inclusive maximum stream speed, in rows-per-frame.
+  #[serde(default)]
+  pub max_speed: Option<f32>,
+
+  /// Per-cell, per-frame probability of a glyph mutating (the faint trail
+  /// shimmer). `0.0` disables.
+  #[serde(default)]
+  pub mutate_chance: Option<f32>,
 }
 
 /// Greeting alignment options
@@ -555,4 +602,8 @@ const fn default_kb_sessions() -> u8 {
 
 const fn default_kb_power() -> u8 {
   12
+}
+
+const fn default_kb_background() -> u8 {
+  4
 }

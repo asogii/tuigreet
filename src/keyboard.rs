@@ -89,7 +89,7 @@ pub async fn handle(
           greeter.cursor_offset = 0;
         },
 
-        Mode::Users | Mode::Sessions | Mode::Power => {
+        Mode::Users | Mode::Sessions | Mode::Power | Mode::Background => {
           greeter.mode = greeter.previous_mode;
         },
 
@@ -118,9 +118,11 @@ pub async fn handle(
       ..
     } if i == greeter.kb_command => {
       greeter.previous_mode = match greeter.mode {
-        Mode::Users | Mode::Command | Mode::Sessions | Mode::Power => {
-          greeter.previous_mode
-        },
+        Mode::Users
+        | Mode::Command
+        | Mode::Sessions
+        | Mode::Power
+        | Mode::Background => greeter.previous_mode,
         _ => greeter.mode,
       };
 
@@ -143,9 +145,11 @@ pub async fn handle(
       ..
     } if i == greeter.kb_sessions && !greeter.sessions.options.is_empty() => {
       greeter.previous_mode = match greeter.mode {
-        Mode::Users | Mode::Command | Mode::Sessions | Mode::Power => {
-          greeter.previous_mode
-        },
+        Mode::Users
+        | Mode::Command
+        | Mode::Sessions
+        | Mode::Power
+        | Mode::Background => greeter.previous_mode,
         _ => greeter.mode,
       };
 
@@ -160,13 +164,32 @@ pub async fn handle(
       ..
     } if i == greeter.kb_power && !greeter.powers.options.is_empty() => {
       greeter.previous_mode = match greeter.mode {
-        Mode::Users | Mode::Command | Mode::Sessions | Mode::Power => {
-          greeter.previous_mode
-        },
+        Mode::Users
+        | Mode::Command
+        | Mode::Sessions
+        | Mode::Power
+        | Mode::Background => greeter.previous_mode,
         _ => greeter.mode,
       };
 
       greeter.mode = Mode::Power;
+    },
+
+    // F4 (default) opens the background animation switcher.
+    KeyEvent {
+      code: KeyCode::F(i),
+      ..
+    } if i == greeter.kb_background => {
+      greeter.previous_mode = match greeter.mode {
+        Mode::Users
+        | Mode::Command
+        | Mode::Sessions
+        | Mode::Power
+        | Mode::Background => greeter.previous_mode,
+        _ => greeter.mode,
+      };
+
+      greeter.mode = Mode::Background;
     },
 
     // Handle moving up in menus.
@@ -183,6 +206,10 @@ pub async fn handle(
 
       if greeter.mode == Mode::Power && greeter.powers.selected > 0 {
         greeter.powers.selected -= 1;
+      }
+
+      if greeter.mode == Mode::Background && greeter.backgrounds.selected > 0 {
+        greeter.backgrounds.selected -= 1;
       }
     },
 
@@ -207,6 +234,13 @@ pub async fn handle(
         && greeter.powers.selected + 1 < greeter.powers.options.len()
       {
         greeter.powers.selected += 1;
+      }
+
+      if greeter.mode == Mode::Background
+        && !greeter.backgrounds.options.is_empty()
+        && greeter.backgrounds.selected < greeter.backgrounds.options.len() - 1
+      {
+        greeter.backgrounds.selected += 1;
       }
     },
 
@@ -341,6 +375,11 @@ pub async fn handle(
             power(&mut greeter, command.action).await;
           }
 
+          greeter.mode = greeter.previous_mode;
+        },
+
+        Mode::Background => {
+          greeter.apply_background_selection();
           greeter.mode = greeter.previous_mode;
         },
 
@@ -721,6 +760,7 @@ mod test {
 
     for (key, mode) in [
       (KeyCode::F(3), Mode::Sessions),
+      (KeyCode::F(4), Mode::Background),
       (KeyCode::F(12), Mode::Power),
     ] {
       {
@@ -869,6 +909,110 @@ mod test {
     .await;
     assert!(matches!(result, Ok(())));
     assert_eq!(greeter.read().await.sessions.selected, 0);
+  }
+
+  #[tokio::test]
+  async fn background_switcher_selects_kind() {
+    use crate::ui::{
+      background::Background,
+      bg_animation::{self as animation, KINDS, Kind},
+      common::menu::Menu,
+    };
+
+    let greeter = Arc::new(RwLock::new(Greeter::default()));
+
+    // Manually populate the menu (test_greeter doesn't run parse_options)
+    {
+      let mut g = greeter.write().await;
+      g.mode = Mode::Username;
+      let mut options = vec![Background {
+        kind:  None,
+        label: "None".into(),
+      }];
+      for entry in KINDS {
+        options.push(Background {
+          kind:  Some(entry.kind),
+          label: entry.label.into(),
+        });
+      }
+      g.backgrounds = Menu {
+        title: "bg".into(),
+        options,
+        selected: 0,
+      };
+      // Start with an animation active so we can verify it gets cleared
+      g.animation = Some(animation::build_default(Kind::Doom));
+    }
+
+    // Open background menu
+    let _ = handle(
+      greeter.clone(),
+      KeyEvent::new(KeyCode::F(4), KeyModifiers::empty()),
+      Ipc::new(),
+    )
+    .await;
+    {
+      let g = greeter.read().await;
+      assert_eq!(g.mode, Mode::Background);
+      assert_eq!(g.previous_mode, Mode::Username);
+      assert_eq!(g.backgrounds.selected, 0);
+    }
+
+    // Move selection
+    let _ = handle(
+      greeter.clone(),
+      KeyEvent::new(KeyCode::Down, KeyModifiers::empty()),
+      Ipc::new(),
+    )
+    .await;
+    {
+      let g = greeter.read().await;
+      assert_eq!(g.backgrounds.selected, 1);
+    }
+
+    // Apply the selection
+    let _ = handle(
+      greeter.clone(),
+      KeyEvent::new(KeyCode::Enter, KeyModifiers::empty()),
+      Ipc::new(),
+    )
+    .await;
+    {
+      let g = greeter.read().await;
+      assert_eq!(g.mode, Mode::Username);
+      assert!(
+        g.animation.is_some(),
+        "selecting Doom should set an animation"
+      );
+    }
+
+    // Select "None" to clear
+    let _ = handle(
+      greeter.clone(),
+      KeyEvent::new(KeyCode::F(4), KeyModifiers::empty()),
+      Ipc::new(),
+    )
+    .await;
+    let _ = handle(
+      greeter.clone(),
+      KeyEvent::new(KeyCode::Up, KeyModifiers::empty()),
+      Ipc::new(),
+    )
+    .await;
+    let _ = handle(
+      greeter.clone(),
+      KeyEvent::new(KeyCode::Enter, KeyModifiers::empty()),
+      Ipc::new(),
+    )
+    .await;
+    {
+      let g = greeter.read().await;
+      assert_eq!(g.mode, Mode::Username);
+      assert!(
+        g.animation.is_none(),
+        "selecting None should clear the animation"
+      );
+    }
   }
 
   #[tokio::test]

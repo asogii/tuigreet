@@ -3,11 +3,15 @@ title_command = Change session command
 title_power = Power options
 title_session = Change session
 title_users = Select a user
+title_background = Background animation
 
 action_reset = Reset
 action_command = Change command
 action_session = Choose session
 action_power = Power
+action_background = Background
+
+background_none = None
 
 date = %a, %d %h %Y - %H:%M
 
