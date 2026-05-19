@@ -414,6 +414,9 @@ pub fn extract_cli_config(matches: &getopts::Matches) -> Config {
   if let Some(cmd) = matches.opt_str("cmd") {
     config.session.command = Some(cmd);
   }
+  if matches.opt_present("env") {
+    config.session.environments = matches.opt_strs("env");
+  }
   if let Some(dirs) = matches.opt_str("sessions") {
     config.session.sessions_dirs = dirs.split(':').map(String::from).collect();
   }

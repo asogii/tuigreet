@@ -981,15 +981,15 @@ impl Greeter {
     }
 
     if let Some(dirs) = self.option("sessions") {
-      self
-        .session_paths
-        .extend(env::split_paths(&dirs).map(|dir| (dir, SessionType::Wayland)));
+      for dir in env::split_paths(&dirs) {
+        self.add_session_path(dir, SessionType::Wayland);
+      }
     }
 
     if let Some(dirs) = self.option("xsessions") {
-      self
-        .session_paths
-        .extend(env::split_paths(&dirs).map(|dir| (dir, SessionType::X11)));
+      for dir in env::split_paths(&dirs) {
+        self.add_session_path(dir, SessionType::X11);
+      }
     }
 
     if let Some(wrapper) = self.option("session-wrapper") {
@@ -1112,6 +1112,43 @@ impl Greeter {
     }
   }
 
+  fn add_session_path(&mut self, path: PathBuf, session_type: SessionType) {
+    if self.session_paths.iter().any(|(known_path, known_type)| {
+      known_path == &path && known_type == &session_type
+    }) {
+      return;
+    }
+
+    self.session_paths.push((path, session_type));
+  }
+
+  fn set_power_command(
+    &mut self,
+    action: PowerOption,
+    command: Option<String>,
+  ) {
+    if let Some(power) = self
+      .powers
+      .options
+      .iter_mut()
+      .find(|power| power.action == action)
+    {
+      power.command = command;
+      return;
+    }
+
+    let label = match action {
+      PowerOption::Shutdown => fl!("shutdown"),
+      PowerOption::Reboot => fl!("reboot"),
+    };
+
+    self.powers.options.push(Power {
+      action,
+      label,
+      command,
+    });
+  }
+
   pub fn set_prompt(&mut self, prompt: &str) {
     self.prompt = if prompt.ends_with(' ') {
       Some(prompt.into())
@@ -1142,24 +1179,16 @@ impl Greeter {
     if config.session.command.is_some() {
       self.session_source = SessionSource::DefaultCommand(
         config.session.command.clone().unwrap(),
-        None,
+        Some(config.session.environments.clone())
+          .filter(|environments| !environments.is_empty()),
       );
     }
-    self
-      .session_paths
-      .extend(config.session.sessions_dirs.iter().map(|dir| {
-        (
-          PathBuf::from(dir),
-          crate::ui::sessions::SessionType::Wayland,
-        )
-      }));
-    self.session_paths.extend(
-      config
-        .session
-        .xsessions_dirs
-        .iter()
-        .map(|dir| (PathBuf::from(dir), crate::ui::sessions::SessionType::X11)),
-    );
+    for dir in &config.session.sessions_dirs {
+      self.add_session_path(PathBuf::from(dir), SessionType::Wayland);
+    }
+    for dir in &config.session.xsessions_dirs {
+      self.add_session_path(PathBuf::from(dir), SessionType::X11);
+    }
     if config.session.session_wrapper.is_some() {
       self.session_wrapper = config.session.session_wrapper.clone();
     }
@@ -1193,6 +1222,11 @@ impl Greeter {
         selected: 0,
       };
     }
+    // Power
+    self
+      .set_power_command(PowerOption::Shutdown, config.power.shutdown.clone());
+    self.set_power_command(PowerOption::Reboot, config.power.reboot.clone());
+    self.power_setsid = config.power.use_setsid;
     // Secret
     match config.secret.mode {
       SecretMode::Hidden => self.secret_display = SecretDisplay::Hidden,
@@ -1283,9 +1317,13 @@ fn print_version() {
 
 #[cfg(test)]
 mod test {
-  use tuigreet::SecretDisplay;
+  use tuigreet::{SecretDisplay, config::Config};
 
-  use crate::{Greeter, ui::sessions::SessionSource};
+  use crate::{
+    Greeter,
+    power::PowerOption,
+    ui::sessions::{SessionSource, SessionType},
+  };
 
   #[test]
   fn test_prompt_width() {
@@ -1420,5 +1458,93 @@ mod test {
         false => assert!((greeter.parse_options(opts).await).is_err()),
       }
     }
+  }
+
+  #[tokio::test]
+  async fn test_session_paths_are_deduplicated_after_config_overlay() {
+    let mut greeter = Greeter::default();
+
+    assert!(
+      greeter
+        .parse_options(&["--sessions", "/usr/share/wayland-sessions"])
+        .await
+        .is_ok()
+    );
+
+    let config = Config::default();
+    greeter.apply_config(&config);
+
+    assert_eq!(
+      greeter
+        .session_paths
+        .iter()
+        .filter(|(path, session_type)| {
+          path == &std::path::PathBuf::from("/usr/share/wayland-sessions")
+            && session_type == &SessionType::Wayland
+        })
+        .count(),
+      1
+    );
+  }
+
+  #[tokio::test]
+  async fn test_config_session_environments_survive_cli_overlay() {
+    let mut greeter = Greeter::default();
+
+    assert!(
+      greeter
+        .parse_options(&[
+          "--cmd",
+          "sway",
+          "--env",
+          "XDG_CURRENT_DESKTOP=sway",
+          "--env",
+          "XDG_SESSION_TYPE=wayland",
+        ])
+        .await
+        .is_ok()
+    );
+
+    let mut config = Config::default();
+    config.session.command = Some("sway".to_string());
+    config.session.environments = vec![
+      "XDG_CURRENT_DESKTOP=sway".to_string(),
+      "XDG_SESSION_TYPE=wayland".to_string(),
+    ];
+    greeter.apply_config(&config);
+
+    assert!(matches!(
+      &greeter.session_source,
+      SessionSource::DefaultCommand(command, Some(environments))
+        if command == "sway"
+          && environments
+            == &vec![
+              "XDG_CURRENT_DESKTOP=sway".to_string(),
+              "XDG_SESSION_TYPE=wayland".to_string()
+            ]
+    ));
+  }
+
+  #[tokio::test]
+  async fn test_config_power_options_are_applied() {
+    let mut greeter = Greeter::default();
+
+    assert!(greeter.parse_options(&[] as &[&str]).await.is_ok());
+
+    let mut config = Config::default();
+    config.power.shutdown = Some("loginctl poweroff".to_string());
+    config.power.reboot = Some("loginctl reboot".to_string());
+    config.power.use_setsid = false;
+    greeter.apply_config(&config);
+
+    assert!(!greeter.power_setsid);
+    assert!(greeter.powers.options.iter().any(|power| {
+      power.action == PowerOption::Shutdown
+        && power.command.as_deref() == Some("loginctl poweroff")
+    }));
+    assert!(greeter.powers.options.iter().any(|power| {
+      power.action == PowerOption::Reboot
+        && power.command.as_deref() == Some("loginctl reboot")
+    }));
   }
 }
