@@ -13,11 +13,18 @@ mod watcher;
 
 #[cfg(test)] mod integration;
 
+#[cfg(not(test))] use std::mem;
 use std::{error::Error, io, process, sync::Arc};
 
 #[cfg(not(test))]
-use crossterm::terminal::{EnterAlternateScreen, enable_raw_mode};
+use crossterm::terminal::{
+  Clear,
+  ClearType,
+  EnterAlternateScreen,
+  enable_raw_mode,
+};
 use crossterm::{
+  cursor::Hide,
   execute,
   terminal::{LeaveAlternateScreen, disable_raw_mode},
 };
@@ -131,6 +138,12 @@ where
     if let Some(status) = greeter.read().await.exit {
       tracing::info!("exiting main loop");
 
+      // Skip `Terminal`'s `Drop`, it would re-emit `\x1b[?25h` whenever the
+      // last frame ran with `hidden_cursor = true`, un-hiding the cursor right
+      // after `exit` hid it. Leaking the buffers is harmless at process exit.
+      #[cfg(not(test))]
+      mem::forget(terminal);
+
       return Err(status.into());
     }
 
@@ -152,7 +165,12 @@ where
           execute!(io::stdout(), LeaveAlternateScreen)?;
           terminal.set_cursor_position((1, 1))?;
           terminal.clear()?;
+          execute!(io::stdout(), Hide)?;
           disable_raw_mode()?;
+
+          // Same rationale as the exit-status branch above.
+          #[cfg(not(test))]
+          mem::forget(terminal);
 
           break;
         }
@@ -183,7 +201,7 @@ async fn exit(greeter: &mut Greeter, status: AuthStatus) {
   #[cfg(not(test))]
   clear_screen();
 
-  let _ = execute!(io::stdout(), LeaveAlternateScreen);
+  let _ = execute!(io::stdout(), LeaveAlternateScreen, Hide);
   let _ = disable_raw_mode();
 
   greeter.exit = Some(status);
@@ -196,7 +214,7 @@ fn register_panic_handler() {
     #[cfg(not(test))]
     clear_screen();
 
-    let _ = execute!(io::stdout(), LeaveAlternateScreen);
+    let _ = execute!(io::stdout(), LeaveAlternateScreen, Hide);
     let _ = disable_raw_mode();
 
     hook(info);
@@ -205,12 +223,11 @@ fn register_panic_handler() {
 
 #[cfg(not(test))]
 pub fn clear_screen() {
-  let backend = CrosstermBackend::new(io::stdout());
-
-  if let Ok(mut terminal) = Terminal::new(backend) {
-    let _ = terminal.hide_cursor();
-    let _ = terminal.clear();
-  }
+  // Emit cursor-hide and clear directly via crossterm rather than wrapping the
+  // stdout in a `ratatui::Terminal`: the latter re-emits `\x1b[?25h` from its
+  // `Drop` impl whenever `hidden_cursor` is true, which would un-hide the
+  // cursor right after we hide it.
+  let _ = execute!(io::stdout(), Hide, Clear(ClearType::All));
 }
 
 #[cfg(not(test))]
