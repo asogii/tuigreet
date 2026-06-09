@@ -373,6 +373,38 @@ where
   }))
 }
 
+pub struct BatteryInfo {
+  pub percentage: u8,
+  pub charging:   bool,
+}
+
+pub fn get_battery_info() -> Option<BatteryInfo> {
+  let power_dir = Path::new("/sys/class/power_supply");
+  let entries = fs::read_dir(power_dir).ok()?;
+
+  for entry in entries.flatten() {
+    let name = entry.file_name();
+    if !name.to_string_lossy().starts_with("BAT") {
+      continue;
+    }
+    let capacity_path = entry.path().join("capacity");
+    let status_path = entry.path().join("status");
+    if let Ok(content) = fs::read_to_string(&capacity_path)
+      && let Ok(cap) = content.trim().parse::<u8>()
+    {
+      let charging = fs::read_to_string(&status_path)
+        .map(|s| s.trim() == "Charging")
+        .unwrap_or(false);
+      return Some(BatteryInfo {
+        percentage: cap,
+        charging,
+      });
+    }
+  }
+
+  None
+}
+
 pub fn capslock_status() -> bool {
   let mut command = Command::new("kbdinfo");
   command.args(["gkbled", "capslock"]);
