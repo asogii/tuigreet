@@ -1,27 +1,22 @@
-[package]
-name         = "tuigreet"
-description  = "Stylish graphical console greeter for greetd, built with Ratatui "
-version      = "0.10.2"
-authors      = [ "Antoine POPINEAU <antoine@popineau.eu>", "NotAShelf <raf@notashelf.dev" ]
+[workspace]
+members  = [ "crates/*" ]
+resolver = "3"
+
+[workspace.package]
 edition      = "2024"
 license      = "GPL-3.0-only"
-rust-version = "1.91.0"
 repository   = "https://github.com/notashelf/tuigreet"
+rust-version = "1.91.0"
+version      = "0.10.2"
 
-[lib]
-crate-type = [ "rlib" ]
-name       = "tuigreet"
-path       = "src/lib.rs"
+[workspace.dependencies]
+# Workspace dependencies
+tuigreet-config = { path = "crates/tuigreet-config" }
+tuigreet-system = { path = "crates/tuigreet-system" }
+tuigreet-theme  = { path = "crates/tuigreet-theme" }
+tuigreet-types  = { path = "crates/tuigreet-types" }
 
-[[bin]]
-name = "tuigreet"
-path = "src/main.rs"
-
-[features]
-default    = [  ]
-nsswrapper = [  ]
-
-[dependencies]
+# External
 ansi-to-tui = "7.0.0"
 chrono = { version = "0.4.42", features = [ "unstable-locales" ] }
 codespan-reporting = "0.13.1"
@@ -59,7 +54,7 @@ utmp-rs = "0.4.0"
 uzers = "0.12.2"
 zeroize = "1.8.2"
 
-[dev-dependencies]
+# Dev
 greetd-stub   = "0.3.0"
 tempfile      = "3.10.1"
 unicode-width = "0.2.0"

@@ -1905,7 +1905,6 @@ version = "0.10.2"
 dependencies = [
  "ansi-to-tui",
  "chrono",
- "codespan-reporting",
  "crossterm 0.29.0",
  "dirs",
  "futures",
@@ -1920,19 +1919,56 @@ dependencies = [
  "ratatui",
  "rust-embed",
  "rust-ini",
- "serde",
  "tempfile",
  "tokio",
  "toml 1.1.2+spec-1.1.0",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
+ "tuigreet-config",
+ "tuigreet-system",
+ "tuigreet-theme",
+ "tuigreet-types",
  "unic-langid",
  "unicode-width 0.2.0",
  "utmp-rs",
  "uzers",
  "zeroize",
 ]
+
+[[package]]
+name = "tuigreet-config"
+version = "0.10.2"
+dependencies = [
+ "chrono",
+ "codespan-reporting",
+ "dirs",
+ "getopts",
+ "serde",
+ "toml 1.1.2+spec-1.1.0",
+ "tracing",
+]
+
+[[package]]
+name = "tuigreet-system"
+version = "0.10.2"
+dependencies = [
+ "tempfile",
+ "tracing",
+ "tuigreet-config",
+]
+
+[[package]]
+name = "tuigreet-theme"
+version = "0.10.2"
+dependencies = [
+ "ratatui",
+ "tuigreet-config",
+]
+
+[[package]]
+name = "tuigreet-types"
+version = "0.10.2"
 
 [[package]]
 name = "type-map"

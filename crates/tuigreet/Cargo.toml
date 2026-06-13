@@ -1,0 +1,52 @@
+[package]
+name                   = "tuigreet"
+description            = "Stylish graphical console greeter for greetd, built with Ratatui"
+version.workspace      = true
+edition.workspace      = true
+license.workspace      = true
+rust-version.workspace = true
+repository             = "https://github.com/notashelf/tuigreet"
+
+[[bin]]
+name = "tuigreet"
+path = "src/main.rs"
+
+[features]
+default    = [  ]
+nsswrapper = [  ]
+
+[dependencies]
+tuigreet-config = { workspace = true }
+tuigreet-system = { workspace = true }
+tuigreet-theme  = { workspace = true }
+tuigreet-types  = { workspace = true }
+
+ansi-to-tui        = { workspace = true }
+chrono             = { workspace = true }
+crossterm          = { workspace = true }
+dirs               = { workspace = true }
+futures            = { workspace = true }
+getopts            = { workspace = true }
+greetd_ipc         = { workspace = true }
+i18n-embed         = { workspace = true }
+i18n-embed-fl      = { workspace = true }
+nix                = { workspace = true }
+notify             = { workspace = true }
+rand               = { workspace = true }
+rust-embed         = { workspace = true }
+rust-ini           = { workspace = true }
+tokio              = { workspace = true }
+toml               = { workspace = true }
+tracing            = { workspace = true }
+tracing-appender   = { workspace = true }
+tracing-subscriber = { workspace = true }
+tui                = { workspace = true }
+unic-langid        = { workspace = true }
+utmp-rs            = { workspace = true }
+uzers              = { workspace = true }
+zeroize            = { workspace = true }
+
+[dev-dependencies]
+greetd-stub   = { workspace = true }
+tempfile      = { workspace = true }
+unicode-width = { workspace = true }

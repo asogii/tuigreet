@@ -1,0 +1,7 @@
+[package]
+name         = "tuigreet-types"
+description  = "Shared types for tuigreet"
+version.workspace      = true
+edition.workspace      = true
+license.workspace      = true
+rust-version.workspace = true

@@ -7,7 +7,7 @@
 }: let
   commonArgs = {
     pname = "tuigreet";
-    version = (lib.importTOML ../Cargo.toml).package.version;
+    version = (lib.importTOML ../Cargo.toml).workspace.package.version;
     src = let
       s = ../.;
       fs = lib.fileset;
@@ -15,9 +15,8 @@
       fs.toSource {
         root = s;
         fileset = fs.unions [
-          (fs.fileFilter (file: builtins.any file.hasExt ["rs"]) (s + /src))
           (s + /contrib)
-          (s + /build.rs)
+          (s + /crates)
           (s + /Cargo.lock)
           (s + /Cargo.toml)
           (s + /i18n.toml)
