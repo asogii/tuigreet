@@ -19,7 +19,6 @@
           (s + /crates)
           (s + /Cargo.lock)
           (s + /Cargo.toml)
-          (s + /i18n.toml)
         ];
       };
     strictDeps = true;
@@ -46,7 +45,7 @@ in
       '';
 
       meta = {
-        description = "Graphical console greeter for greetd";
+        description = "Stylish graphical console greeter for greetd";
         license = lib.licenses.gpl3Only;
         maintainers = with lib.maintainers; [NotAShelf];
         mainProgram = "tuigreet";
