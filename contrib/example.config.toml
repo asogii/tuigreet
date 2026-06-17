@@ -122,6 +122,12 @@ show_caps_lock = true
 # Custom reboot command
 # reboot = "sudo systemctl reboot"
 
+# Custom suspend command (default: "loginctl suspend")
+# suspend = "loginctl suspend"
+
+# Custom hibernate command (default: "loginctl hibernate")
+# hibernate = "loginctl hibernate"
+
 # Use setsid to detach power commands
 use_setsid = true
 

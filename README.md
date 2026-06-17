@@ -104,8 +104,8 @@ available through `F12`.
 tuigreet can paint an animated backdrop behind the login form. Animations are
 off by default and selected by name with `--background <name>`, or by setting
 `kind` in the `[background]` section of your config file. The login form is
-drawn on top of the animation and clears the cells it occupies, so the
-prompt remains legible regardless of what the backdrop is doing.
+drawn on top of the animation and clears the cells it occupies, so the prompt
+remains legible regardless of what the backdrop is doing.
 
 Frame rate is configurable through `--background-fps`, and defaults to 30 FPS
 while an animation is active (the UI otherwise ticks at the usual 2 FPS).
@@ -114,24 +114,23 @@ entirely, in which case there is no per-frame cost.
 
 The following animation is available out of the box:
 
-- `doom` — The classic DOOM fire effect. Two parameters control the shape
-  of the flames: `--doom-height` (decay control, 1–9, default `6`) makes
-  flames taller at higher values, and `--doom-spread` (horizontal jitter,
-  0–4, default `2`) widens them. The three color bands are set together
-  with `--doom-colors TOP,MIDDLE,BOTTOM` — each accepts `#RRGGBB`,
-  `0xRRGGBB`, or any named color.
-- `matrix` — Falling green digital rain. Stream length is set
-  with `--matrix-length MIN,MAX` (rows, default `6,18`) and fall speed
-  with `--matrix-speed MIN,MAX` (rows-per-frame, default `0.30,1.10`); the
-  three color bands are set together with `--matrix-colors HEAD,BRIGHT,DIM`.
+- `doom` - The classic DOOM fire effect. Two parameters control the shape of the
+  flames: `--doom-height` (decay control, 1–9, default `6`) makes flames taller
+  at higher values, and `--doom-spread` (horizontal jitter, 0–4, default `2`)
+  widens them. The three color bands are set together with
+  `--doom-colors TOP,MIDDLE,BOTTOM`; each accepts `#RRGGBB`, `0xRRGGBB`, or any
+  named color.
+- `matrix` - Falling green digital rain. Stream length is set with
+  `--matrix-length MIN,MAX` (rows, default `6,18`) and fall speed with
+  `--matrix-speed MIN,MAX` (rows-per-frame, default `0.30,1.10`); the three
+  color bands are set together with `--matrix-colors HEAD,BRIGHT,DIM`.
 
-You can also switch animations on the fly without restarting the greeter
-by hitting `F4`. This opens a small menu listing every available
-animation plus a `None` entry to disable the backdrop; selection rebuilds
-the active animation with that kind's default options. The hotkey is
-configurable through `--kb-background` or the `background` field of the
-`[keybindings]` section, the same way the existing F2/F3/F12 menus are
-configured.
+You can also switch animations on the fly without restarting the greeter by
+hitting `F4`. This opens a small menu listing every available animation plus a
+`None` entry to disable the backdrop; selection rebuilds the active animation
+with that kind's default options. The hotkey is configurable through
+`--kb-background` or the `background` field of the `[keybindings]` section, the
+same way the existing F2/F3/F12 menus are configured.
 
 ## Installing Tuigreet
 
@@ -540,16 +539,18 @@ server is started properly.
 
 ### Power management
 
-Two power actions are possible from `tuigreet`, shutting down (through
-`shutdown -h now`) and rebooting (with `shutdown -r now`) the machine. This
-requires that those commands be executable by regular users, which is not the
-case on some distros.
+Four power actions are possible from `tuigreet`: shutting down (through
+`shutdown -h now`), rebooting (with `shutdown -r now`), suspending (with
+`loginctl suspend`) and hibernating (with `loginctl hibernate`) the machine.
+This requires that those commands be executable by regular users, which is not
+the case on some distros. `loginctl` is provided by both systemd and elogind, so
+the suspend and hibernate defaults work on non-systemd distributions as well.
 
-To alleviate this, there are two options that can be used to customize the
-commands that are run: `--power-shutdown` and `--power-reboot`. The provided
-commands must be non-interactive, meaning they will not be able to print
-anything or prompt for anything. If you need to use `sudo` or `doas`, they will
-need to be configured to run passwordless for those specific commands.
+To alleviate this, there are options to customize the commands that are run:
+`--power-shutdown`, `--power-reboot`, `--power-suspend` and `--power-hibernate`.
+The provided commands must be non-interactive, meaning they will not be able to
+print anything or prompt for anything. If you need to use `sudo` or `doas`, they
+will need to be configured to run passwordless for those specific commands.
 
 An example for `/etc/greetd/config.toml`:
 
@@ -623,7 +624,7 @@ Which results in the following:
 ### Visual mock-up mode
 
 For previewing themes, animations, or layout changes without a running greetd,
-pass `--mock`. tuigreet will run as normal, but emulate auth flow locally. 
+pass `--mock`. tuigreet will run as normal, but emulate auth flow locally.
 
 ```sh
 tuigreet --mock
