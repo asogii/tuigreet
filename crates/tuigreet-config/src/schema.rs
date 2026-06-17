@@ -414,6 +414,14 @@ pub struct PowerConfig {
   #[serde(default)]
   pub reboot: Option<String>,
 
+  /// Custom suspend command
+  #[serde(default)]
+  pub suspend: Option<String>,
+
+  /// Custom hibernate command
+  #[serde(default)]
+  pub hibernate: Option<String>,
+
   /// Use setsid to detach power commands
   #[serde(default = "default_use_setsid")]
   pub use_setsid: bool,
@@ -424,6 +432,8 @@ impl Default for PowerConfig {
     Self {
       shutdown:   None,
       reboot:     None,
+      suspend:    None,
+      hibernate:  None,
       use_setsid: default_use_setsid(),
     }
   }

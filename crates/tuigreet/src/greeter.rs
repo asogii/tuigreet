@@ -775,6 +775,18 @@ impl Greeter {
       "command to run to reboot the system",
       "'CMD [ARGS]...'",
     );
+    opts.optopt(
+      "",
+      "power-suspend",
+      "command to run to suspend the system",
+      "'CMD [ARGS]...'",
+    );
+    opts.optopt(
+      "",
+      "power-hibernate",
+      "command to run to hibernate the system",
+      "'CMD [ARGS]...'",
+    );
     opts.optflag(
       "",
       "power-no-setsid",
@@ -1069,6 +1081,18 @@ impl Greeter {
       command: self.config().opt_str("power-reboot"),
     });
 
+    self.powers.options.push(Power {
+      action:  PowerOption::Suspend,
+      label:   fl!("suspend"),
+      command: self.config().opt_str("power-suspend"),
+    });
+
+    self.powers.options.push(Power {
+      action:  PowerOption::Hibernate,
+      label:   fl!("hibernate"),
+      command: self.config().opt_str("power-hibernate"),
+    });
+
     self.power_setsid = !self.config().opt_present("power-no-setsid");
 
     self.kb_command = self
@@ -1257,6 +1281,8 @@ impl Greeter {
     let label = match action {
       PowerOption::Shutdown => fl!("shutdown"),
       PowerOption::Reboot => fl!("reboot"),
+      PowerOption::Suspend => fl!("suspend"),
+      PowerOption::Hibernate => fl!("hibernate"),
     };
 
     self.powers.options.push(Power {

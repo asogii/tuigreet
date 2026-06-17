@@ -202,6 +202,14 @@ pub fn load_env_variables() -> Config {
     config.power.reboot = Some(value);
   }
 
+  if let Ok(value) = env::var("TUIGREET_POWER_SUSPEND") {
+    config.power.suspend = Some(value);
+  }
+
+  if let Ok(value) = env::var("TUIGREET_POWER_HIBERNATE") {
+    config.power.hibernate = Some(value);
+  }
+
   if let Ok(value) = env::var("TUIGREET_POWER_USE_SETSID") {
     if let Ok(use_setsid) = parse_bool(&value) {
       config.power.use_setsid = use_setsid;

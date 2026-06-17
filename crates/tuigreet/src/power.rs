@@ -11,6 +11,8 @@ pub enum PowerOption {
   #[default]
   Shutdown,
   Reboot,
+  Suspend,
+  Hibernate,
 }
 
 /// Execute a power command (shutdown or reboot).
@@ -52,14 +54,30 @@ pub async fn power(greeter: &mut Greeter, option: PowerOption) {
     },
 
     Some(_) => {
-      let mut command = Command::new("shutdown");
-
-      match option {
-        PowerOption::Shutdown => command.arg("-h"),
-        PowerOption::Reboot => command.arg("-r"),
+      let command = match option {
+        PowerOption::Shutdown => {
+          let mut command = Command::new("shutdown");
+          command.args(["-h", "now"]);
+          command
+        },
+        PowerOption::Reboot => {
+          let mut command = Command::new("shutdown");
+          command.args(["-r", "now"]);
+          command
+        },
+        // `loginctl` is provided by both systemd and elogind, so these
+        // defaults work across systemd and non-systemd distributions.
+        PowerOption::Suspend => {
+          let mut command = Command::new("loginctl");
+          command.arg("suspend");
+          command
+        },
+        PowerOption::Hibernate => {
+          let mut command = Command::new("loginctl");
+          command.arg("hibernate");
+          command
+        },
       };
-
-      command.arg("now");
 
       Some(command)
     },

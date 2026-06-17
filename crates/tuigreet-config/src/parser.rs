@@ -233,6 +233,12 @@ fn apply_config_layer(dest: &mut Config, src: Config) {
   if src.power.reboot != defaults.power.reboot {
     dest.power.reboot = src.power.reboot;
   }
+  if src.power.suspend != defaults.power.suspend {
+    dest.power.suspend = src.power.suspend;
+  }
+  if src.power.hibernate != defaults.power.hibernate {
+    dest.power.hibernate = src.power.hibernate;
+  }
   if src.power.use_setsid != defaults.power.use_setsid {
     dest.power.use_setsid = src.power.use_setsid;
   }
@@ -570,6 +576,12 @@ pub fn extract_cli_config(matches: &getopts::Matches) -> Config {
   if let Some(cmd) = matches.opt_str("power-reboot") {
     config.power.reboot = Some(cmd);
   }
+  if let Some(cmd) = matches.opt_str("power-suspend") {
+    config.power.suspend = Some(cmd);
+  }
+  if let Some(cmd) = matches.opt_str("power-hibernate") {
+    config.power.hibernate = Some(cmd);
+  }
   if matches.opt_present("power-no-setsid") {
     config.power.use_setsid = false;
   }
@@ -831,6 +843,28 @@ impl Config {
     {
       warnings.push(
         "reboot command without setsid or privilege escalation may fail"
+          .to_string(),
+      );
+    }
+
+    if let Some(ref cmd) = self.power.suspend
+      && !self.power.use_setsid
+      && !cmd.contains("sudo")
+      && !cmd.contains("doas")
+    {
+      warnings.push(
+        "suspend command without setsid or privilege escalation may fail"
+          .to_string(),
+      );
+    }
+
+    if let Some(ref cmd) = self.power.hibernate
+      && !self.power.use_setsid
+      && !cmd.contains("sudo")
+      && !cmd.contains("doas")
+    {
+      warnings.push(
+        "hibernate command without setsid or privilege escalation may fail"
           .to_string(),
       );
     }

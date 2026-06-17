@@ -20,6 +20,8 @@ new_command = Yeni komut:
 
 shutdown = Kapat
 reboot = Yeniden başlat
+suspend = Askıya al
+hibernate = Hazırda beklet
 
 command_missing = Komut yapılandırılmadı
 command_exited = Komut şu kodla çıktı
