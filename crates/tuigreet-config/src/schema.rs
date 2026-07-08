@@ -127,6 +127,19 @@ impl TerminalConfig {
   }
 }
 
+/// Cursor style for the input fields
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum CursorStyle {
+  /// Show an underline cursor
+  #[default]
+  Underline,
+  /// Show a block cursor
+  Block,
+  /// Hide the cursor entirely
+  None,
+}
+
 /// General configuration options
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub struct GeneralConfig {
@@ -228,6 +241,10 @@ pub struct DisplayConfig {
   /// Greeting text alignment
   #[serde(default)]
   pub align_greeting: AlignGreeting,
+
+  /// Cursor style for input fields
+  #[serde(default)]
+  pub cursor_style: CursorStyle,
 }
 
 /// Remember/cache configuration

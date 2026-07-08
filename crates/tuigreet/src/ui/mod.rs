@@ -31,7 +31,7 @@ use tui::{
   text::{Line, Span},
   widgets::Paragraph,
 };
-use tuigreet_config::{BatteryPosition, WidgetPosition};
+use tuigreet_config::{BatteryPosition, CursorStyle, WidgetPosition};
 use tuigreet_types::Mode;
 use util::buttonize;
 
@@ -325,7 +325,40 @@ where
     };
 
     if !hide_cursor && let Some(cursor) = cursor {
-      f.set_cursor_position((cursor.0 - 1, cursor.1 - 1));
+      let pos = (cursor.0 - 1, cursor.1 - 1);
+
+      let current_millis = Local::now().timestamp_millis();
+      let elapsed = current_millis - greeter.last_input_time;
+      let is_blink_on = (elapsed / 500) % 2 == 0;
+
+      let area = f.area();
+      if is_blink_on && pos.0 < area.width && pos.1 < area.height {
+        let cell = &mut f.buffer_mut()[(pos.0, pos.1)];
+
+        match greeter.cursor_style {
+          CursorStyle::None => {},
+          CursorStyle::Underline => {
+            if cell.symbol() == " " || cell.symbol().is_empty() {
+              cell.set_symbol("_");
+            } else {
+              let style = cell.style();
+              cell.set_style(style.add_modifier(Modifier::REVERSED));
+            }
+          },
+          CursorStyle::Block => {
+            if cell.symbol() == " " || cell.symbol().is_empty() {
+              cell.set_symbol("█");
+            } else {
+              let style = cell.style();
+              cell.set_style(style.add_modifier(Modifier::REVERSED));
+            }
+          },
+        }
+      }
+
+      greeter.last_cursor_pos = Some(pos);
+    } else {
+      greeter.last_cursor_pos = None;
     }
   })?;
 

@@ -1,5 +1,6 @@
 use std::{error::Error, sync::Arc};
 
+use chrono::Local;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use greetd_ipc::Request;
 use tokio::sync::RwLock;
@@ -46,6 +47,8 @@ pub async fn handle(
   if greeter.working {
     return Ok(());
   }
+
+  greeter.last_input_time = Local::now().timestamp_millis();
 
   match input {
     // ^U should erase the current buffer.

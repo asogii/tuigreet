@@ -20,6 +20,7 @@ use tokio::{
 };
 use tracing_appender::non_blocking::WorkerGuard;
 use tuigreet_theme::Theme;
+use tuigreet_config::CursorStyle;
 use tuigreet_types::{
   AuthStatus,
   DEFAULT_ASTERISKS_CHARS,
@@ -85,6 +86,12 @@ pub struct Greeter {
   // Offset the cursor should be at from its base position for the current
   // mode.
   pub cursor_offset: i16,
+  // Last cursor position set in the terminal (None = never set yet), used to
+  // avoid calling set_cursor_position every frame so the terminal emulator's
+  // native cursor blink timer isn't reset on every render.
+  pub last_cursor_pos: Option<(u16, u16)>,
+  pub last_input_time: i64,
+  pub cursor_style:    CursorStyle,
 
   // Buffer to be used as a temporary editing zone for the various modes.
   // Previous buffer is saved when a transient screen has to use the buffer, to
@@ -192,6 +199,9 @@ impl Default for Greeter {
       mode:                       Mode::default(),
       previous_mode:              Mode::default(),
       cursor_offset:              0,
+      last_cursor_pos:            None,
+      last_input_time:            0,
+      cursor_style:               CursorStyle::default(),
       previous_buffer:            None,
       buffer:                     String::new(),
       session_source:             SessionSource::default(),
@@ -706,6 +716,12 @@ impl Greeter {
       "FORMAT",
     );
     opts.optflag("b", "battery", "display battery percentage");
+    opts.optopt(
+      "",
+      "cursor-style",
+      "cursor style for input fields (default: 'underline')",
+      "[underline|block|none]",
+    );
     opts.optopt("u", "user", "pre-fill username field", "USER");
     opts.optflag("r", "remember", "remember last logged-in username");
     opts.optflag("", "remember-session", "remember last selected session");
@@ -1382,6 +1398,7 @@ impl Greeter {
     // General
     self.debug = config.general.debug;
     self.numlock = config.general.numlock;
+    self.cursor_style = config.display.cursor_style;
     // Session
     if config.session.command.is_some() {
       self.session_source = SessionSource::DefaultCommand(

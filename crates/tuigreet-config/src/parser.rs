@@ -15,6 +15,7 @@ use crate::{
   AlignGreeting,
   Config,
   ConfigError,
+  CursorStyle,
   SecretMode,
   env::load_env_variables,
 };
@@ -76,6 +77,9 @@ fn apply_config_layer(dest: &mut Config, src: Config) {
   }
   if src.general.numlock != defaults.general.numlock {
     dest.general.numlock = src.general.numlock;
+  }
+  if src.display.cursor_style != defaults.display.cursor_style {
+    dest.display.cursor_style = src.display.cursor_style;
   }
 
   // Session
@@ -519,6 +523,14 @@ pub fn extract_cli_config(matches: &getopts::Matches) -> Config {
       "left" => AlignGreeting::Left,
       "right" => AlignGreeting::Right,
       _ => AlignGreeting::Center,
+    };
+  }
+  if let Some(style) = matches.opt_str("cursor-style") {
+    config.display.cursor_style = match style.as_str() {
+      "underline" => CursorStyle::Underline,
+      "block" => CursorStyle::Block,
+      "none" => CursorStyle::None,
+      _ => CursorStyle::Underline,
     };
   }
   // Remember config

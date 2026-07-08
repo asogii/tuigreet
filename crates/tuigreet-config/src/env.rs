@@ -2,14 +2,14 @@ use std::env;
 
 use crate::{
   Config,
-  schema::{AlignGreeting, SecretMode, WidgetPosition},
+  schema::{AlignGreeting, CursorStyle, SecretMode, WidgetPosition},
 };
 
 /// Apply environment variable overrides to configuration.
 ///
 /// Supported variables: `TUIGREET_DEBUG`, `TUIGREET_LOG_FILE`,
-/// `TUIGREET_SESSION_COMMAND`, etc. Invalid boolean values are logged as
-/// warnings and ignored.
+/// `TUIGREET_CURSOR_STYLE`, `TUIGREET_SESSION_COMMAND`, etc. Invalid boolean
+/// values are logged as warnings and ignored.
 pub fn load_env_variables() -> Config {
   let mut config = Config::default();
   // General config
@@ -36,6 +36,21 @@ pub fn load_env_variables() -> Config {
         "Invalid TUIGREET_NUMLOCK value: '{}', expected true/false",
         value
       );
+    }
+  }
+
+  if let Ok(value) = env::var("TUIGREET_CURSOR_STYLE") {
+    match value.to_lowercase().as_str() {
+      "underline" => config.display.cursor_style = CursorStyle::Underline,
+      "block" => config.display.cursor_style = CursorStyle::Block,
+      "none" => config.display.cursor_style = CursorStyle::None,
+      _ => {
+        tracing::warn!(
+          "Invalid TUIGREET_CURSOR_STYLE value: '{}', expected \
+           'underline', 'block', or 'none'",
+          value
+        );
+      },
     }
   }
 
