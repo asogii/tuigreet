@@ -29,7 +29,7 @@ use tui::{
   layout::{Alignment, Constraint, Direction, Layout},
   style::Modifier,
   text::{Line, Span},
-  widgets::Paragraph,
+  widgets::{Paragraph, Clear},
 };
 use tuigreet_config::{BatteryPosition, CursorStyle, WidgetPosition};
 use tuigreet_types::Mode;
@@ -147,6 +147,9 @@ where
 
     // Render top info row: time centered, battery overlaid
     if let Some(slot) = info_top_slot {
+      if greeter.animation.is_some() {
+        f.render_widget(Clear, chunks[slot]);
+      }
       if time_at_top {
         f.render_widget(
           Paragraph::new(Span::from(get_time(&greeter)))
@@ -183,6 +186,9 @@ where
 
     // Render time at bottom
     if let Some(slot) = time_bottom_slot {
+      if greeter.animation.is_some() {
+        f.render_widget(Clear, chunks[slot]);
+      }
       f.render_widget(
         Paragraph::new(Span::from(get_time(&greeter)))
           .alignment(Alignment::Center)
@@ -193,6 +199,9 @@ where
 
     // Render status bar if not hidden
     if let Some(slot) = status_slot {
+      if greeter.animation.is_some() {
+        f.render_widget(Clear, chunks[slot]);
+      }
       let status_block_size_right = 1
         + greeter.window_padding()
         + fl!("status_caps").chars().count() as u16;
